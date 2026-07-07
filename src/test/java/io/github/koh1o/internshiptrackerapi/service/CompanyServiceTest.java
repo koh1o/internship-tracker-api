@@ -61,4 +61,15 @@ public class CompanyServiceTest {
         assertSame(company, result.get());
         verify(companyRepository).findById(id);
     }
+
+    @Test
+    void shouldReturnEmptyWhenCompanyDoesNotExist() {
+        Long id = 1L;
+
+        when(companyRepository.findById(id))
+                .thenReturn(Optional.empty());
+        Optional<Company> result = companyService.getCompanyById(id);
+        assertTrue(result.isEmpty());
+        verify(companyRepository).findById(id);
+    }
 }
