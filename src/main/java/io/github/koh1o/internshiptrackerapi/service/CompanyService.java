@@ -5,6 +5,7 @@ import io.github.koh1o.internshiptrackerapi.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CompanyService {
@@ -20,5 +21,9 @@ public class CompanyService {
 
     public List<Company> getAllCompanies() {
         return companyRepository.findAll();
+    }
+
+    public Optional<Company> getCompanyById(Long id) {
+        return companyRepository.findById(id);
     }
 }

@@ -9,8 +9,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,5 +47,18 @@ public class CompanyServiceTest {
         List<Company> result = companyService.getAllCompanies();
         assertSame(companies, result);
         verify(companyRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnCompanyById() {
+        Company company = new Company("JetBrains", null, null);
+        Long id = 1L;
+
+        when(companyRepository.findById(id))
+                .thenReturn(Optional.of(company));
+        Optional<Company> result = companyService.getCompanyById(id);
+        assertTrue(result.isPresent());
+        assertSame(company, result.get());
+        verify(companyRepository).findById(id);
     }
 }
