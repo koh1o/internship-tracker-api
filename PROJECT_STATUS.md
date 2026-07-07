@@ -42,6 +42,12 @@
 - [x] Проверено внедрение `CompanyRepository`.
 - [x] Проверены сохранение и чтение `Company` через PostgreSQL.
 - [x] Все 3 теста завершились с `BUILD SUCCESS`.
+- [x] Создан `CompanyService`.
+- [x] `CompanyRepository` внедряется через конструктор.
+- [x] Реализован метод `createCompany()`.
+- [x] Добавлен unit-тест `CompanyServiceTest`.
+- [x] Проверены вызов `save()` и возвращаемый результат.
+- [x] Все 4 теста завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
@@ -70,6 +76,12 @@
 - `findById()` возвращает `Optional`, потому что запись может отсутствовать.
 - `@DataJpaTest` запускает JPA-часть Spring-контекста.
 - `@AutoConfigureTestDatabase(replace = NONE)` оставляет подключение к PostgreSQL вместо встроенной тестовой базы.
+- Service содержит бизнес-логику и использует Repository для работы с данными.
+- Constructor injection передаёт зависимость через конструктор.
+- `@Service` позволяет Spring создать и управлять объектом Service.
+- Mock заменяет настоящую зависимость в unit-тесте.
+- `when(...).thenReturn(...)` задаёт поведение mock.
+- `verify(...)` проверяет взаимодействие Service с Repository.
 
 ## Что я пока понимаю частично
 
@@ -92,16 +104,16 @@
 
 ## Последний рабочий коммит
 
-- Hash: `f310b65`
-- Message: `Add Company repository and JPA test`
-- Тесты перед коммитом: 3 теста прошли успешно.
+- Hash: `5d5de86`
+- Message: `Add Company service creation`
+- Тесты перед коммитом: 4 теста прошли успешно.
 - Коммит отправлен на GitHub: да.
 
 ## Следующее задание
 
-1. Разобрать назначение слоя Service.
-2. Создать пакет `service`.
-3. Начать реализацию `CompanyService`.
+1. Добавить получение списка компаний в `CompanyService`.
+2. Добавить unit-тест для получения списка.
+3. После этого перейти к поиску компании по `id`.
 
 ## Критерии завершения текущего этапа
 
@@ -183,6 +195,69 @@
 - Разобрать наследование от `JpaRepository`.
 - Проверить сохранение и чтение `Company`.
 
+### 2026-07-07
+
+#### Выполнено
+
+- Создан пакет `repository`.
+- Создан `CompanyRepository`.
+- Добавлено наследование от `JpaRepository<Company, Long>`.
+- Добавлена зависимость `spring-boot-starter-data-jpa-test`.
+- Создан `CompanyRepositoryTest`.
+- Проверено внедрение `CompanyRepository`.
+- Проверены сохранение и чтение `Company` через PostgreSQL.
+- Создан пакет `service`.
+- Создан `CompanyService`.
+- `CompanyRepository` внедрён в `CompanyService` через конструктор.
+- Реализован метод `createCompany()`.
+- Создан unit-тест `CompanyServiceTest`.
+- Repository заменён mock-объектом через Mockito.
+- Проверены результат `createCompany()` и вызов `companyRepository.save()`.
+- Все 4 теста завершились с `BUILD SUCCESS`.
+
+#### Изучено
+
+- Назначение слоя Repository.
+- Значение параметров `Company` и `Long` в `JpaRepository`.
+- Работа методов `save()` и `findById()`.
+- Назначение `Optional`.
+- Назначение `@DataJpaTest`.
+- Работа `@AutoConfigureTestDatabase(replace = NONE)`.
+- Разница между слоями Service и Repository.
+- Назначение `@Service`.
+- Constructor injection.
+- Назначение mock-объектов.
+- Работа `@Mock` и `@InjectMocks`.
+- Настройка mock через `when(...).thenReturn(...)`.
+- Проверка вызова метода через `verify(...)`.
+
+#### Возникшие проблемы
+
+- `@DataJpaTest` пытался заменить PostgreSQL на отсутствующую встроенную базу данных.
+- Пустой конструктор `Company` имел уровень доступа `protected`, поэтому тест из другого пакета не мог вызвать `new Company()`.
+- После форматирования часть изменений не сразу попала в staging area.
+
+#### Исправления
+
+- Добавлено `@AutoConfigureTestDatabase(replace = NONE)`.
+- В Repository-тесте использован публичный конструктор `Company(String, String, String)`.
+- После форматирования изменённые файлы повторно добавлены через `git add`.
+- Перед коммитами проверены staged diff, тесты и `git status`.
+
+#### Коммиты
+
+- `f310b65 Add Company repository and JPA test`
+- `b8f6ab3 Update project status after Company repository`
+- `5d5de86 Add Company service creation`
+
+Все коммиты отправлены на GitHub.
+
+#### Следующее действие
+
+- Добавить получение списка компаний в `CompanyService`.
+- Добавить unit-тест для получения списка.
+- После этого перейти к поиску компании по `id`.
+
 ## Точка остановки
 
 ### 2026-07-07
@@ -190,10 +265,13 @@
 - Создан `CompanyRepository`.
 - Repository наследуется от `JpaRepository<Company, Long>`.
 - Проверены сохранение и чтение `Company` через PostgreSQL.
-- Добавлен и успешно выполнен `CompanyRepositoryTest`.
-- Все 3 теста завершаются с `BUILD SUCCESS`.
-- Последний коммит с кодом: `f310b65 Add Company repository and JPA test`.
+- Создан `CompanyService`.
+- `CompanyRepository` внедряется в Service через конструктор.
+- Реализован метод `createCompany()`.
+- Добавлен unit-тест `CompanyServiceTest` с Mockito.
+- Все 4 теста завершаются с `BUILD SUCCESS`.
+- Последний коммит с кодом: `5d5de86 Add Company service creation`.
 - Коммит отправлен на GitHub.
 - Рабочее дерево после отправки коммита было чистым.
-- Следующий шаг: разобрать слой Service и создать пакет `service`.
-- Перед следующим запуском тестов в новом терминале нужно установить `DB_PASSWORD`.
+- Следующий шаг: добавить получение списка компаний в `CompanyService`.
+- Перед запуском всех тестов в новом терминале нужно установить `DB_PASSWORD`.
