@@ -35,6 +35,13 @@
 - [x] Создана таблица `companies`.
 - [x] Проверены типы, длины и nullable-ограничения столбцов.
 - [x] Добавлено автоматическое заполнение `createdAt` и `updatedAt`.
+- [x] Создан `CompanyRepository`.
+- [x] `CompanyRepository` наследуется от `JpaRepository<Company, Long>`.
+- [x] Добавлена зависимость `spring-boot-starter-data-jpa-test`.
+- [x] Добавлен `CompanyRepositoryTest`.
+- [x] Проверено внедрение `CompanyRepository`.
+- [x] Проверены сохранение и чтение `Company` через PostgreSQL.
+- [x] Все 3 теста завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
@@ -57,6 +64,12 @@
 - `@PreUpdate` вызывается перед обновлением Entity.
 - `DataSource` содержит настройки подключения приложения к базе данных.
 - Пароль базы данных передаётся через переменную окружения `DB_PASSWORD`.
+- `JpaRepository<Company, Long>` работает с Entity `Company` и идентификатором типа `Long`.
+- Spring Data создаёт реализацию Repository автоматически.
+- `save()` сохраняет Entity и возвращает сохранённый объект.
+- `findById()` возвращает `Optional`, потому что запись может отсутствовать.
+- `@DataJpaTest` запускает JPA-часть Spring-контекста.
+- `@AutoConfigureTestDatabase(replace = NONE)` оставляет подключение к PostgreSQL вместо встроенной тестовой базы.
 
 ## Что я пока понимаю частично
 
@@ -79,17 +92,16 @@
 
 ## Последний рабочий коммит
 
-- Hash: `bf02b16`
-- Message: `Add Company entity`
-- Тесты перед коммитом: прошли успешно.
+- Hash: `f310b65`
+- Message: `Add Company repository and JPA test`
+- Тесты перед коммитом: 3 теста прошли успешно.
 - Коммит отправлен на GitHub: да.
 
 ## Следующее задание
 
-1. Создать пакет `repository`.
-2. Создать `CompanyRepository`.
-3. Разобрать интерфейс `JpaRepository`.
-4. Проверить сохранение и чтение `Company`.
+1. Разобрать назначение слоя Service.
+2. Создать пакет `service`.
+3. Начать реализацию `CompanyService`.
 
 ## Критерии завершения текущего этапа
 
@@ -173,14 +185,15 @@
 
 ## Точка остановки
 
-### 2026-07-06
+### 2026-07-07
 
-- Сущность `Company` полностью создана.
-- Таблица `companies` создана и проверена в PostgreSQL.
-- Маппинг столбцов и ограничения проверены.
-- Тесты завершаются с `BUILD SUCCESS`.
-- Последний коммит с кодом: `bf02b16 Add Company entity`.
-- Последний коммит в репозитории: `70e8296 Update project status for Company entity`.
-- Пакет `repository` ещё не создан.
-- Следующий шаг: создать пакет `repository` и интерфейс `CompanyRepository`.
-- Перед следующим запуском после открытия нового терминала нужно снова установить переменную `DB_PASSWORD`.
+- Создан `CompanyRepository`.
+- Repository наследуется от `JpaRepository<Company, Long>`.
+- Проверены сохранение и чтение `Company` через PostgreSQL.
+- Добавлен и успешно выполнен `CompanyRepositoryTest`.
+- Все 3 теста завершаются с `BUILD SUCCESS`.
+- Последний коммит с кодом: `f310b65 Add Company repository and JPA test`.
+- Коммит отправлен на GitHub.
+- Рабочее дерево после отправки коммита было чистым.
+- Следующий шаг: разобрать слой Service и создать пакет `service`.
+- Перед следующим запуском тестов в новом терминале нужно установить `DB_PASSWORD`.
