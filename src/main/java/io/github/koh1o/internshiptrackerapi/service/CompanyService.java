@@ -4,6 +4,8 @@ import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class CompanyService {
     private final CompanyRepository companyRepository;
@@ -14,5 +16,9 @@ public class CompanyService {
 
     public Company createCompany(Company company) {
         return companyRepository.save(company);
+    }
+
+    public List<Company> getAllCompanies() {
+        return companyRepository.findAll();
     }
 }

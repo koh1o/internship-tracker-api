@@ -8,6 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,5 +31,19 @@ public class CompanyServiceTest {
         Company result = companyService.createCompany(company);
         assertSame(savedCompany, result);
         verify(companyRepository).save(company);
+    }
+
+    @Test
+    void shouldReturnAllCompanies() {
+        Company firstCompany = new Company("JetBrains", null, null);
+        Company secondCompany = new Company("Yandex", null, null);
+
+        List<Company> companies = List.of(firstCompany, secondCompany);
+
+        when(companyRepository.findAll())
+                .thenReturn(companies);
+        List<Company> result = companyService.getAllCompanies();
+        assertSame(companies, result);
+        verify(companyRepository).findAll();
     }
 }
