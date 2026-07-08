@@ -72,4 +72,11 @@ public class CompanyServiceTest {
         assertTrue(result.isEmpty());
         verify(companyRepository).findById(id);
     }
+
+    @Test
+    void shouldDeleteCompanyById() {
+        Long id = 1L;
+        companyService.deleteCompany(id);
+        verify(companyRepository).deleteById(id);
+    }
 }

@@ -26,4 +26,8 @@ public class CompanyService {
     public Optional<Company> getCompanyById(Long id) {
         return companyRepository.findById(id);
     }
+
+    public void deleteCompany(Long id) {
+        companyRepository.deleteById(id);
+    }
 }
