@@ -2,9 +2,17 @@
 
 ## Текущий этап
 
-Этап 1 — реализация Company.
+Этап 1 — реализация Company CRUD.
 
-Сущность `Company` и таблица `companies` созданы. Следующий шаг — `CompanyRepository` и проверка сохранения данных.
+В `CompanyService` реализованы полный CRUD: создание, получение списка, поиск по `id`, обновление и удаление компании.
+
+В `CompanyController` реализованы:
+
+- `GET /api/companies`;
+- `POST /api/companies`;
+- `GET /api/companies/{id}`.
+
+Следующий шаг — реализовать удаление компании через HTTP endpoint.
 
 ## Уже выполнено
 
@@ -48,6 +56,23 @@
 - [x] Добавлен unit-тест `CompanyServiceTest`.
 - [x] Проверены вызов `save()` и возвращаемый результат.
 - [x] Все 4 теста завершились с `BUILD SUCCESS`.
+- [x] Реализован метод `getAllCompanies()`.
+- [x] Добавлен unit-тест получения списка компаний.
+- [x] Реализован метод `getCompanyById()`.
+- [x] Добавлен unit-тест успешного поиска компании по `id`.
+- [x] Добавлен unit-тест отсутствующей компании через `Optional.empty()`.
+- [x] Все 7 тестов проекта завершились с `BUILD SUCCESS`.
+- [x] Реализован метод `deleteCompany()` в `CompanyService`.
+- [x] Добавлен unit-тест удаления компании.
+- [x] Реализован метод `updateCompany()` в `CompanyService`.
+- [x] Добавлены unit-тесты успешного обновления и отсутствующей компании.
+- [x] Проверено, что при отсутствии компании метод `save()` не вызывается.
+- [x] Создан `CompanyController`.
+- [x] Реализован `GET /api/companies`.
+- [x] Реализован `POST /api/companies` с ответом `201 Created`.
+- [x] Реализован `GET /api/companies/{id}`.
+- [x] Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
+- [x] Все 10 тестов проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
@@ -82,6 +107,23 @@
 - Mock заменяет настоящую зависимость в unit-тесте.
 - `when(...).thenReturn(...)` задаёт поведение mock.
 - `verify(...)` проверяет взаимодействие Service с Repository.
+- `findAll()` возвращает список всех Entity.
+- `Optional.of(company)` обозначает найденную компанию.
+- `Optional.empty()` обозначает отсутствие компании.
+- `isPresent()` проверяет наличие значения в `Optional`.
+- `isEmpty()` проверяет отсутствие значения в `Optional`.
+- `assertSame()` проверяет, что возвращён тот же объект.
+- `@RestController` обозначает класс, который принимает HTTP-запросы и возвращает данные.
+- `@RequestMapping` задаёт общий путь для всех endpoint контроллера.
+- `@GetMapping` обрабатывает GET-запросы.
+- `@PostMapping` обрабатывает POST-запросы.
+- `@RequestBody` преобразует JSON из тела запроса в Java-объект.
+- `@PathVariable` получает значение из части URL.
+- `ResponseEntity` позволяет управлять HTTP-статусом и телом ответа.
+- `200 OK` означает успешное получение данных.
+- `201 Created` означает успешное создание ресурса.
+- `404 Not Found` означает, что запрошенный ресурс не найден.
+- Контроллер вызывает Service и не обращается к Repository напрямую.
 
 ## Что я пока понимаю частично
 
@@ -89,7 +131,6 @@
 - Что такое dependency injection.
 - Полную структуру HTTP-запроса и HTTP-ответа.
 - Принципы REST API.
-- Разницу между Controller, Service и Repository.
 - Устройство `pom.xml`.
 - Работу с ветками Git и команду `merge`.
 
@@ -104,26 +145,33 @@
 
 ## Последний рабочий коммит
 
-- Hash: `5d5de86`
-- Message: `Add Company service creation`
-- Тесты перед коммитом: 4 теста прошли успешно.
-- Коммит отправлен на GitHub: да.
+- Hash: `6c337e3`
+- Message: `Add company lookup endpoint`
+- Все 10 тестов прошли успешно.
+- Коммит отправлен на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
 
 ## Следующее задание
 
-1. Добавить получение списка компаний в `CompanyService`.
-2. Добавить unit-тест для получения списка.
-3. После этого перейти к поиску компании по `id`.
+1. Реализовать endpoint `DELETE /api/companies/{id}` в `CompanyController`.
+2. Получить `id` через `@PathVariable`.
+3. Вызвать существующий метод `companyService.deleteCompany(id)`.
+4. Вернуть подходящий HTTP-статус после успешного удаления.
+5. Проверить endpoint вручную.
+6. Запустить все тесты.
 
-## Критерии завершения текущего этапа
+## Критерии завершения текущего подэтапа
 
-- `Company` отмечена как JPA Entity.
-- Таблица `companies` создана в PostgreSQL.
-- Столбцы и ограничения соответствуют модели.
-- `createdAt` и `updatedAt` заполняются автоматически.
-- Тесты завершаются с `BUILD SUCCESS`.
+- Созданы `CompanyRepository`, `CompanyService` и `CompanyController`.
+- В `CompanyService` реализованы `createCompany()`, `getAllCompanies()`, `getCompanyById()`, `updateCompany()` и `deleteCompany()`.
+- Реализованы `GET /api/companies`, `POST /api/companies` и `GET /api/companies/{id}`.
+- Проверены найденная и отсутствующая компания.
+- Unit-тесты Service используют Mockito.
+- Все 10 тестов проекта завершаются с `BUILD SUCCESS`.
+- Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
 - В Git не попали секреты, `.idea/` и `target/`.
-- Коммит `Add Company entity` создан и отправлен на GitHub.
+- Все рабочие коммиты отправлены на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
 
 ## Вопросы для повторения
 
@@ -214,6 +262,12 @@
 - Repository заменён mock-объектом через Mockito.
 - Проверены результат `createCompany()` и вызов `companyRepository.save()`.
 - Все 4 теста завершились с `BUILD SUCCESS`.
+- Реализован метод `getAllCompanies()`.
+- Добавлен unit-тест получения списка компаний.
+- Реализован метод `getCompanyById()`.
+- Добавлены тесты найденной и отсутствующей компании.
+- Проверено использование `Optional.of()` и `Optional.empty()`.
+- Все 7 тестов проекта завершились с `BUILD SUCCESS`.
 
 #### Изучено
 
@@ -249,29 +303,49 @@
 - `f310b65 Add Company repository and JPA test`
 - `b8f6ab3 Update project status after Company repository`
 - `5d5de86 Add Company service creation`
+- `3d7434e Add company list service method`
+- `cae42ed Add company lookup by id`
+- `eddab8f Add missing company lookup test`
 
 Все коммиты отправлены на GitHub.
 
 #### Следующее действие
 
-- Добавить получение списка компаний в `CompanyService`.
-- Добавить unit-тест для получения списка.
-- После этого перейти к поиску компании по `id`.
+- Добавить метод `deleteCompany(Long id)` в `CompanyService`.
+- Добавить unit-тест `shouldDeleteCompanyById`.
+- Проверить вызов Repository через `verify(...)`.
 
 ## Точка остановки
 
+### 2026-07-08
+
+- В `CompanyService` реализованы `deleteCompany()` и `updateCompany()`.
+- В `CompanyServiceTest` добавлены тесты удаления и обновления компании.
+- Проверены успешное обновление и попытка обновить отсутствующую компанию.
+- Создан `CompanyController`.
+- Реализован `GET /api/companies`.
+- Реализован `POST /api/companies` с ответом `201 Created`.
+- Реализован `GET /api/companies/{id}`.
+- Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
+- Всего в проекте 10 тестов, все завершаются с `BUILD SUCCESS`.
+- Последний коммит с кодом: `6c337e3 Add company lookup endpoint`.
+- Все коммиты с кодом отправлены на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
+- Следующий шаг: реализовать `DELETE /api/companies/{id}`.
+- Перед запуском приложения и интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
+
 ### 2026-07-07
 
-- Создан `CompanyRepository`.
-- Repository наследуется от `JpaRepository<Company, Long>`.
-- Проверены сохранение и чтение `Company` через PostgreSQL.
-- Создан `CompanyService`.
-- `CompanyRepository` внедряется в Service через конструктор.
+- Созданы `CompanyRepository` и `CompanyService`.
 - Реализован метод `createCompany()`.
-- Добавлен unit-тест `CompanyServiceTest` с Mockito.
-- Все 4 теста завершаются с `BUILD SUCCESS`.
-- Последний коммит с кодом: `5d5de86 Add Company service creation`.
+- Реализован метод `getAllCompanies()`.
+- Реализован метод `getCompanyById()`.
+- Проверены успешный поиск и отсутствие компании.
+- В `CompanyServiceTest` находится 4 unit-теста.
+- Всего в проекте 7 тестов, все завершаются с `BUILD SUCCESS`.
+- Последний коммит: `eddab8f Add missing company lookup test`.
 - Коммит отправлен на GitHub.
-- Рабочее дерево после отправки коммита было чистым.
-- Следующий шаг: добавить получение списка компаний в `CompanyService`.
+- Ветка `main` синхронизирована с `origin/main`.
+- Рабочее дерево чистое.
+- Следующий шаг: реализовать `deleteCompany(Long id)` и unit-тест.
 - Перед запуском всех тестов в новом терминале нужно установить `DB_PASSWORD`.
