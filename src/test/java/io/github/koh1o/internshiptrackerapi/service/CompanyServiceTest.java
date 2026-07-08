@@ -11,8 +11,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -78,5 +81,62 @@ public class CompanyServiceTest {
         Long id = 1L;
         companyService.deleteCompany(id);
         verify(companyRepository).deleteById(id);
+    }
+
+    @Test
+    void shouldUpdateCompanyWhenCompanyExists() {
+        Long id = 1L;
+
+        Company existingCompany = new Company(
+                "Old company",
+                "https://old.example.com",
+                "Old description"
+        );
+
+        Company updatedCompany = new Company(
+                "Updated company",
+                "https://updated.example.com",
+                "Updated description"
+        );
+
+        when(companyRepository.findById(id))
+                .thenReturn(Optional.of(existingCompany));
+        when(companyRepository.save(existingCompany))
+                .thenReturn(existingCompany);
+        Optional<Company> result = companyService.updateCompany(id, updatedCompany);
+
+        assertTrue(result.isPresent());
+
+        Company resultCompany = result.get();
+
+        String updatedName = resultCompany.getName();
+        String updatedWebsite = resultCompany.getWebsite();
+        String updatedDescription = resultCompany.getDescription();
+
+        assertEquals("Updated company", updatedName);
+        assertEquals("https://updated.example.com", updatedWebsite);
+        assertEquals("Updated description", updatedDescription);
+
+        verify(companyRepository).findById(id);
+        assertSame(existingCompany, resultCompany);
+        verify(companyRepository).save(existingCompany);
+    }
+
+    @Test
+    void shouldReturnEmptyWhenUpdatingMissingCompany() {
+        Long id = 1L;
+        Company updatedCompany = new Company(
+                "Updated company",
+                "https://updated.example.com",
+                "Updated description"
+        );
+        when(companyRepository.findById(id))
+                .thenReturn(Optional.empty());
+
+        Optional<Company> result = companyService.updateCompany(id, updatedCompany);
+        assertTrue(result.isEmpty());
+
+        verify(companyRepository).findById(id);
+        verify(companyRepository, never()).save(any(Company.class));
     }
 }

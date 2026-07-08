@@ -30,4 +30,22 @@ public class CompanyService {
     public void deleteCompany(Long id) {
         companyRepository.deleteById(id);
     }
+
+    public Optional<Company> updateCompany(Long id, Company updatedCompany) {
+        Optional<Company> optionalCompany = companyRepository.findById(id);
+
+        if (optionalCompany.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Company existingCompany = optionalCompany.get();
+
+        existingCompany.setName(updatedCompany.getName());
+        existingCompany.setWebsite(updatedCompany.getWebsite());
+        existingCompany.setDescription(updatedCompany.getDescription());
+
+        Company savedCompany = companyRepository.save(existingCompany);
+
+        return Optional.of(savedCompany);
+    }
 }
