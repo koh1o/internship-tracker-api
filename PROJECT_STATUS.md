@@ -2,19 +2,39 @@
 
 ## Текущий этап
 
-Этап 1 — реализация Company CRUD.
+Этап 1 — завершение `Company CRUD` и покрытие Controller тестами.
 
-В `CompanyService` реализованы полный CRUD: создание, получение списка, поиск по `id`, обновление и удаление компании.
+Для `Company` реализованы все основные слои:
 
-В `CompanyController` реализованы:
+- `Company` Entity;
+- `CompanyRepository`;
+- `CompanyService`;
+- `CompanyController`;
+- Repository-, Service- и Controller-тесты.
+
+В `CompanyController` реализованы endpoint:
 
 - `GET /api/companies`;
 - `POST /api/companies`;
-- `GET /api/companies/{id}`.
+- `GET /api/companies/{id}`;
+- `PUT /api/companies/{id}`;
+- `DELETE /api/companies/{id}`.
 
-Следующий шаг — реализовать удаление компании через HTTP endpoint.
+Через `MockMvc` проверены:
+
+- получение списка компаний;
+- получение существующей компании по `id`;
+- ответ `404 Not Found` для отсутствующей компании;
+- создание компании;
+- удаление компании.
+
+Всего в проекте 15 тестов. Последний полный запуск завершился с `BUILD SUCCESS`.
+
+Следующий шаг — добавить controller-тесты для `PUT /api/companies/{id}`, затем перейти к DTO, validation и единой обработке ошибок.
 
 ## Уже выполнено
+
+### Среда и Git
 
 - [x] Установлен и настроен JDK 21.
 - [x] Настроен `JAVA_HOME`.
@@ -22,166 +42,256 @@
 - [x] Установлен и настроен Git.
 - [x] Проверен PostgreSQL 18.4.
 - [x] Создан публичный GitHub-репозиторий `internship-tracker-api`.
-- [x] Создан Spring Boot 4.1.0 проект.
-- [x] Добавлена зависимость Spring Web.
 - [x] Инициализирован локальный Git-репозиторий.
+- [x] Локальная ветка `main` связана с `origin/main`.
 - [x] Проверен `.gitignore`.
+- [x] Код отправлен на GitHub.
+- [x] В Git не добавлены секреты, `.idea/` и `target/`.
+
+### Spring Boot и первый endpoint
+
+- [x] Создан Spring Boot 4.1.0 проект на Java 21 и Maven.
+- [x] Добавлена зависимость Spring Web.
 - [x] Создан пакет `controller`.
 - [x] Создан `HelloController`.
 - [x] Реализован `GET /api/hello`.
 - [x] Endpoint возвращает `Hello, Internship Tracker!`.
-- [x] Выполнена команда `.\mvnw.cmd test`.
-- [x] Тесты завершились с `BUILD SUCCESS`.
-- [x] Создан первый коммит.
-- [x] Локальная ветка `main` связана с `origin/main`.
-- [x] Код отправлен на GitHub.
+- [x] Приложение успешно запускается на порту 8080.
+
+### База данных и Entity
+
 - [x] Добавлены Spring Data JPA и PostgreSQL JDBC Driver.
 - [x] Создана база данных `internship_tracker`.
-- [x] Создана роль `internship_tracker_app`.
-- [x] Настроено безопасное получение пароля через `DB_PASSWORD`.
+- [x] Создана роль PostgreSQL `internship_tracker_app`.
+- [x] Настроено получение пароля через переменную окружения `DB_PASSWORD`.
 - [x] Создана JPA-сущность `Company`.
-- [x] Создана таблица `companies`.
-- [x] Проверены типы, длины и nullable-ограничения столбцов.
-- [x] Добавлено автоматическое заполнение `createdAt` и `updatedAt`.
+- [x] Для `Company` добавлены поля `id`, `name`, `website`, `description`, `createdAt`, `updatedAt`.
+- [x] Настроены JPA-аннотации и ограничения столбцов.
+- [x] Добавлено автоматическое заполнение `createdAt` и `updatedAt` через `@PrePersist` и `@PreUpdate`.
+- [x] Hibernate создаёт таблицу `companies`.
+
+### Repository
+
 - [x] Создан `CompanyRepository`.
 - [x] `CompanyRepository` наследуется от `JpaRepository<Company, Long>`.
 - [x] Добавлена зависимость `spring-boot-starter-data-jpa-test`.
-- [x] Добавлен `CompanyRepositoryTest`.
+- [x] Создан `CompanyRepositoryTest`.
 - [x] Проверено внедрение `CompanyRepository`.
 - [x] Проверены сохранение и чтение `Company` через PostgreSQL.
-- [x] Все 3 теста завершились с `BUILD SUCCESS`.
+- [x] В Repository-тестах используется `@DataJpaTest`.
+- [x] PostgreSQL не заменяется встроенной базой благодаря `@AutoConfigureTestDatabase(replace = NONE)`.
+
+### Service
+
 - [x] Создан `CompanyService`.
 - [x] `CompanyRepository` внедряется через конструктор.
-- [x] Реализован метод `createCompany()`.
-- [x] Добавлен unit-тест `CompanyServiceTest`.
-- [x] Проверены вызов `save()` и возвращаемый результат.
-- [x] Все 4 теста завершились с `BUILD SUCCESS`.
-- [x] Реализован метод `getAllCompanies()`.
-- [x] Добавлен unit-тест получения списка компаний.
-- [x] Реализован метод `getCompanyById()`.
-- [x] Добавлен unit-тест успешного поиска компании по `id`.
-- [x] Добавлен unit-тест отсутствующей компании через `Optional.empty()`.
-- [x] Все 7 тестов проекта завершились с `BUILD SUCCESS`.
-- [x] Реализован метод `deleteCompany()` в `CompanyService`.
-- [x] Добавлен unit-тест удаления компании.
-- [x] Реализован метод `updateCompany()` в `CompanyService`.
-- [x] Добавлены unit-тесты успешного обновления и отсутствующей компании.
-- [x] Проверено, что при отсутствии компании метод `save()` не вызывается.
+- [x] Реализован `createCompany()`.
+- [x] Реализован `getAllCompanies()`.
+- [x] Реализован `getCompanyById()`.
+- [x] Реализован `updateCompany()`.
+- [x] Реализован `deleteCompany()`.
+- [x] Создан `CompanyServiceTest`.
+- [x] Repository заменяется mock-объектом через Mockito.
+- [x] Проверены создание, получение списка, поиск, обновление и удаление.
+- [x] Проверены найденная и отсутствующая компания через `Optional`.
+- [x] Проверено, что при обновлении отсутствующей компании `save()` не вызывается.
+
+### Controller и HTTP
+
 - [x] Создан `CompanyController`.
 - [x] Реализован `GET /api/companies`.
 - [x] Реализован `POST /api/companies` с ответом `201 Created`.
 - [x] Реализован `GET /api/companies/{id}`.
-- [x] Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
-- [x] Все 10 тестов проекта завершились с `BUILD SUCCESS`.
+- [x] Реализован `PUT /api/companies/{id}`.
+- [x] Реализован `DELETE /api/companies/{id}` с ответом `204 No Content`.
+- [x] Вручную проверены получение списка и создание компании.
+- [x] Вручную проверены ответы `200 OK`, `201 Created`, `204 No Content` и `404 Not Found`.
+- [x] Вручную проверено обновление компании через `PUT`.
+- [x] Проверено, что при обновлении сохраняется `id` и `createdAt`, а `updatedAt` изменяется.
+
+### Controller-тесты
+
+- [x] Добавлена зависимость `spring-boot-starter-webmvc-test`.
+- [x] Создан `CompanyControllerTest`.
+- [x] Controller тестируется через `@WebMvcTest(CompanyController.class)`.
+- [x] `CompanyService` заменяется mock-объектом через `@MockitoBean`.
+- [x] Добавлен тест получения списка компаний.
+- [x] Добавлен тест успешного поиска компании по `id`.
+- [x] Добавлен тест ответа `404 Not Found` для отсутствующей компании.
+- [x] Добавлен тест создания компании через `POST`.
+- [x] Добавлен тест удаления компании через `DELETE`.
+- [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
+- [x] Все 15 тестов проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
+### Git
+
 - Git хранит историю проекта локально.
 - GitHub хранит удалённую копию репозитория.
+- `git status` показывает состояние рабочего дерева и staging area.
 - `git add` помещает изменения в staging area.
 - `git commit` сохраняет подготовленные изменения в локальной истории.
 - `git push` отправляет локальные коммиты на GitHub.
+- `working tree clean` означает отсутствие незакоммиченных изменений.
+- Ветка может быть чистой, но при этом опережать `origin/main`, пока не выполнен `git push`.
+- `git diff` показывает незастейдженные изменения.
+- `git diff --cached` показывает содержимое будущего коммита.
 - `.gitignore` исключает служебные и генерируемые файлы.
-- `@RestController` обозначает класс HTTP-контроллера.
-- `@GetMapping("/api/hello")` связывает GET-запрос с методом `hello()`.
-- HTTP 404 означает, что обработчик для запрошенного пути не найден.
-- `BUILD SUCCESS` означает успешное завершение сборки и тестов.
-- `@Entity` обозначает класс, который JPA связывает с таблицей базы данных.
+
+### Spring и архитектура
+
+- `@RestController` обозначает класс, который принимает HTTP-запросы и возвращает данные.
+- `@RequestMapping` задаёт общий путь для endpoint контроллера.
+- `@GetMapping`, `@PostMapping`, `@PutMapping` и `@DeleteMapping` связывают HTTP-методы с Java-методами.
+- `@RequestBody` преобразует JSON из тела запроса в Java-объект.
+- `@PathVariable` получает значение из URL.
+- Controller принимает HTTP-запрос и вызывает Service.
+- Service содержит бизнес-логику и вызывает Repository.
+- Controller не должен обращаться к Repository напрямую.
+- Constructor injection передаёт зависимости через конструктор.
+- Spring создаёт управляемые объекты для классов с `@Service`, `@Repository` и `@RestController`.
+- `ResponseEntity` позволяет управлять HTTP-статусом и телом ответа.
+
+### JPA и PostgreSQL
+
+- `@Entity` обозначает класс, связанный с таблицей базы данных.
 - `@Table` явно задаёт имя таблицы.
 - `@Id` обозначает первичный ключ.
 - `@GeneratedValue` настраивает автоматическое создание идентификатора.
-- `@Column` задаёт свойства столбца: обязательность, длину и имя.
+- `@Column` задаёт свойства столбца.
 - `@PrePersist` вызывается перед первым сохранением Entity.
 - `@PreUpdate` вызывается перед обновлением Entity.
-- `DataSource` содержит настройки подключения приложения к базе данных.
-- Пароль базы данных передаётся через переменную окружения `DB_PASSWORD`.
 - `JpaRepository<Company, Long>` работает с Entity `Company` и идентификатором типа `Long`.
 - Spring Data создаёт реализацию Repository автоматически.
 - `save()` сохраняет Entity и возвращает сохранённый объект.
+- `findAll()` возвращает список Entity.
 - `findById()` возвращает `Optional`, потому что запись может отсутствовать.
-- `@DataJpaTest` запускает JPA-часть Spring-контекста.
-- `@AutoConfigureTestDatabase(replace = NONE)` оставляет подключение к PostgreSQL вместо встроенной тестовой базы.
-- Service содержит бизнес-логику и использует Repository для работы с данными.
-- Constructor injection передаёт зависимость через конструктор.
-- `@Service` позволяет Spring создать и управлять объектом Service.
+- Пароль базы данных должен передаваться через `DB_PASSWORD`, а не храниться в Git.
+
+### Тестирование
+
+- Unit-тест Service проверяет один класс без настоящей базы данных.
 - Mock заменяет настоящую зависимость в unit-тесте.
 - `when(...).thenReturn(...)` задаёт поведение mock.
-- `verify(...)` проверяет взаимодействие Service с Repository.
-- `findAll()` возвращает список всех Entity.
+- `verify(...)` проверяет вызов метода mock-объекта.
 - `Optional.of(company)` обозначает найденную компанию.
 - `Optional.empty()` обозначает отсутствие компании.
-- `isPresent()` проверяет наличие значения в `Optional`.
-- `isEmpty()` проверяет отсутствие значения в `Optional`.
-- `assertSame()` проверяет, что возвращён тот же объект.
-- `@RestController` обозначает класс, который принимает HTTP-запросы и возвращает данные.
-- `@RequestMapping` задаёт общий путь для всех endpoint контроллера.
-- `@GetMapping` обрабатывает GET-запросы.
-- `@PostMapping` обрабатывает POST-запросы.
-- `@RequestBody` преобразует JSON из тела запроса в Java-объект.
-- `@PathVariable` получает значение из части URL.
-- `ResponseEntity` позволяет управлять HTTP-статусом и телом ответа.
-- `200 OK` означает успешное получение данных.
+- `@DataJpaTest` запускает JPA-часть Spring-контекста.
+- `@WebMvcTest` запускает MVC-часть приложения для тестирования Controller.
+- `MockMvc` выполняет HTTP-подобные запросы без запуска настоящего сервера.
+- `@MockitoBean` помещает mock в Spring test context.
+- `MediaType.APPLICATION_JSON` обозначает JSON в теле HTTP-запроса.
+- `jsonPath("$.name")` проверяет поле JSON-объекта.
+- `jsonPath("$[0].name")` проверяет поле первого элемента JSON-массива.
+- `any(Company.class)` подходит, когда Spring создаёт новый объект из JSON.
+- Для `void`-метода mock обычно не требует настройки через `when(...)`.
+
+### HTTP
+
+- `200 OK` означает успешное получение или обновление данных.
 - `201 Created` означает успешное создание ресурса.
-- `404 Not Found` означает, что запрошенный ресурс не найден.
-- Контроллер вызывает Service и не обращается к Repository напрямую.
+- `204 No Content` означает успешное выполнение без тела ответа.
+- `404 Not Found` означает, что запрошенный ресурс или обработчик не найден.
+- `BUILD SUCCESS` означает успешное завершение сборки и тестов.
 
 ## Что я пока понимаю частично
 
-- Как Spring находит и создаёт компоненты.
-- Что такое dependency injection.
+- Как Spring сканирует пакеты и создаёт компоненты.
+- Полный механизм dependency injection внутри Spring.
 - Полную структуру HTTP-запроса и HTTP-ответа.
-- Принципы REST API.
-- Устройство `pom.xml`.
+- Принципы REST API и выбор HTTP-статусов для разных ошибок.
+- Устройство `pom.xml` и управление зависимостями Maven.
 - Работу с ветками Git и команду `merge`.
+- Разницу между Entity и DTO.
+- Bean Validation и работу аннотаций валидации.
+- Единую обработку ошибок через `@RestControllerAdvice`.
+- Использование `ArgumentCaptor` для проверки аргументов mock.
 
 ## Известные ошибки
 
 Критических ошибок нет.
 
+Последний полный запуск тестов:
+
+```text
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
+
 ## Технический долг
 
-- Для `GET /api/hello` пока нет отдельного теста через MockMvc.
-- Тест endpoint будет добавлен позже при изучении controller-тестов.
+- Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
+- Для `PUT /api/companies/{id}` пока нет controller-тестов.
+- Controller временно принимает и возвращает `Company` Entity напрямую.
+- Входные данные пока не проверяются через Bean Validation.
+- Ошибки пока не имеют единого JSON-формата.
+- Обработка отсутствующей компании пока выполняется непосредственно в Controller через `Optional`.
+- `DELETE` пока всегда возвращает `204 No Content`; поведение для отсутствующего `id` будет уточнено после добавления единой обработки ошибок.
+- Схема базы данных пока управляется Hibernate; Flyway будет добавлен позже.
+- Предупреждение `spring.jpa.open-in-view` пока не устранено.
+- Предупреждение об отсутствии JTA не является блокирующей ошибкой и пока не требует исправления.
 
 ## Последний рабочий коммит
 
-- Hash: `6c337e3`
-- Message: `Add company lookup endpoint`
-- Все 10 тестов прошли успешно.
+- Hash: `3a8d8e0`
+- Message: `Add company deletion controller test`
+- Все 15 тестов прошли успешно.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
+- Рабочее дерево чистое.
+
+## Последние коммиты
+
+- `dce5d1f Add company list controller test`
+- `ca82a5f Add company lookup controller tests`
+- `514a014 Add company creation controller test`
+- `3a8d8e0 Add company deletion controller test`
 
 ## Следующее задание
 
-1. Реализовать endpoint `DELETE /api/companies/{id}` в `CompanyController`.
-2. Получить `id` через `@PathVariable`.
-3. Вызвать существующий метод `companyService.deleteCompany(id)`.
-4. Вернуть подходящий HTTP-статус после успешного удаления.
-5. Проверить endpoint вручную.
-6. Запустить все тесты.
+1. Добавить controller-тест успешного обновления компании через `PUT /api/companies/{id}`.
+2. Настроить mock `companyService.updateCompany(...)` для найденной компании.
+3. Выполнить PUT-запрос с JSON-телом.
+4. Проверить `200 OK` и поля JSON-ответа.
+5. Проверить вызов Service.
+6. Добавить controller-тест обновления отсутствующей компании.
+7. Проверить `404 Not Found`.
+8. Запустить полный набор тестов.
+9. Создать отдельный осмысленный коммит.
+10. После завершения перейти к DTO, validation и единой обработке ошибок.
 
 ## Критерии завершения текущего подэтапа
 
-- Созданы `CompanyRepository`, `CompanyService` и `CompanyController`.
-- В `CompanyService` реализованы `createCompany()`, `getAllCompanies()`, `getCompanyById()`, `updateCompany()` и `deleteCompany()`.
-- Реализованы `GET /api/companies`, `POST /api/companies` и `GET /api/companies/{id}`.
-- Проверены найденная и отсутствующая компания.
-- Unit-тесты Service используют Mockito.
-- Все 10 тестов проекта завершаются с `BUILD SUCCESS`.
-- Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
-- В Git не попали секреты, `.idea/` и `target/`.
-- Все рабочие коммиты отправлены на GitHub.
-- Ветка `main` синхронизирована с `origin/main`.
+- [x] Созданы `CompanyRepository`, `CompanyService` и `CompanyController`.
+- [x] В `CompanyService` реализован полный CRUD.
+- [x] В `CompanyController` реализован полный CRUD.
+- [x] Unit-тесты Service используют Mockito.
+- [x] Repository-тесты работают с PostgreSQL.
+- [x] Через `MockMvc` проверены список, поиск, создание и удаление.
+- [ ] Через `MockMvc` проверено успешное обновление компании.
+- [ ] Через `MockMvc` проверено обновление отсутствующей компании.
+- [x] Вручную проверены все пять CRUD endpoint.
+- [x] В Git не попали секреты, `.idea/` и `target/`.
+- [x] Все рабочие коммиты отправлены на GitHub.
+- [x] Ветка `main` синхронизирована с `origin/main`.
 
 ## Вопросы для повторения
 
 1. Чем `git add` отличается от `git commit`?
 2. Чем `git commit` отличается от `git push`?
-3. Зачем нужен `.gitignore`?
-4. Что делает `@RestController`?
-5. Что делает `@GetMapping`?
-6. Почему запрос к неизвестному пути возвращает HTTP 404?
-7. Что означает `BUILD SUCCESS`?
+3. Что показывает `git diff --cached`?
+4. Почему `working tree clean` не всегда означает, что все коммиты уже отправлены на GitHub?
+5. Почему Controller не должен обращаться к Repository напрямую?
+6. Зачем нужен слой Service?
+7. Почему `findById()` возвращает `Optional`?
+8. Что произойдёт при вызове `get()` у `Optional.empty()`?
+9. Чем `@DataJpaTest` отличается от `@WebMvcTest`?
+10. Зачем в controller-тесте нужен `@MockitoBean`?
+11. Чем проверка HTTP-статуса отличается от `verify(...)`?
+12. Почему для POST-запроса указывается `MediaType.APPLICATION_JSON`?
+13. Что означает `204 No Content`?
+14. Почему Entity позже нужно заменить на DTO в API?
 
 ## Журнал прогресса
 
@@ -204,7 +314,6 @@
 - Добавлены конструкторы, getters и setters.
 - Настроено автоматическое заполнение `createdAt` и `updatedAt`.
 - Тесты завершились с `BUILD SUCCESS`.
-- Коммит `bf02b16 Add Company entity` отправлен на GitHub.
 
 #### Изучено
 
@@ -219,84 +328,44 @@
 - Безопасное получение пароля через `DB_PASSWORD`.
 - Базовая роль `DataSource`.
 
-#### Возникшие проблемы
+#### Возникшие проблемы и исправления
 
-- IntelliJ не сразу распознала пакет `jakarta.persistence`.
-- Был забыт пароль пользователя `postgres`.
-- При работе Git появлялись предупреждения `LF → CRLF`.
+- IntelliJ не сразу распознала пакет `jakarta.persistence`; Maven-проект был перезагружен.
+- Был забыт пароль пользователя `postgres`; пароль безопасно сброшен и аутентификация восстановлена.
+- Появлялись предупреждения `LF → CRLF`; проверено, что они не являются ошибками.
+- Тип поля `id` исправлен с `long` на `Long`.
 
-#### Исправления
-
-- Maven-проект перезагружен через `Reload All Maven Projects`.
-- Пароль `postgres` безопасно сброшен через временное локальное правило.
-- Безопасная аутентификация PostgreSQL восстановлена.
-- Предупреждения `LF/CRLF` проверены: они не являются ошибками.
-- Исправлены форматирование и тип поля `id` с `long` на `Long`.
-
-#### Последний коммит
+#### Последний коммит дня
 
 - `bf02b16 Add Company entity`
-
-#### Следующее действие
-
-- Создать `CompanyRepository`.
-- Разобрать наследование от `JpaRepository`.
-- Проверить сохранение и чтение `Company`.
 
 ### 2026-07-07
 
 #### Выполнено
 
-- Создан пакет `repository`.
 - Создан `CompanyRepository`.
 - Добавлено наследование от `JpaRepository<Company, Long>`.
-- Добавлена зависимость `spring-boot-starter-data-jpa-test`.
 - Создан `CompanyRepositoryTest`.
-- Проверено внедрение `CompanyRepository`.
-- Проверены сохранение и чтение `Company` через PostgreSQL.
-- Создан пакет `service`.
+- Проверены сохранение и чтение через PostgreSQL.
 - Создан `CompanyService`.
-- `CompanyRepository` внедрён в `CompanyService` через конструктор.
-- Реализован метод `createCompany()`.
-- Создан unit-тест `CompanyServiceTest`.
-- Repository заменён mock-объектом через Mockito.
-- Проверены результат `createCompany()` и вызов `companyRepository.save()`.
-- Все 4 теста завершились с `BUILD SUCCESS`.
-- Реализован метод `getAllCompanies()`.
-- Добавлен unit-тест получения списка компаний.
-- Реализован метод `getCompanyById()`.
+- Repository внедрён через конструктор.
+- Реализованы `createCompany()`, `getAllCompanies()` и `getCompanyById()`.
+- Создан `CompanyServiceTest`.
+- Repository заменён mock-объектом.
 - Добавлены тесты найденной и отсутствующей компании.
-- Проверено использование `Optional.of()` и `Optional.empty()`.
-- Все 7 тестов проекта завершились с `BUILD SUCCESS`.
+- Все 7 тестов завершились с `BUILD SUCCESS`.
 
 #### Изучено
 
 - Назначение слоя Repository.
-- Значение параметров `Company` и `Long` в `JpaRepository`.
-- Работа методов `save()` и `findById()`.
+- Работа `JpaRepository`.
+- Методы `save()`, `findAll()` и `findById()`.
 - Назначение `Optional`.
 - Назначение `@DataJpaTest`.
 - Работа `@AutoConfigureTestDatabase(replace = NONE)`.
-- Разница между слоями Service и Repository.
-- Назначение `@Service`.
+- Разница между Service и Repository.
 - Constructor injection.
-- Назначение mock-объектов.
-- Работа `@Mock` и `@InjectMocks`.
-- Настройка mock через `when(...).thenReturn(...)`.
-- Проверка вызова метода через `verify(...)`.
-
-#### Возникшие проблемы
-
-- `@DataJpaTest` пытался заменить PostgreSQL на отсутствующую встроенную базу данных.
-- Пустой конструктор `Company` имел уровень доступа `protected`, поэтому тест из другого пакета не мог вызвать `new Company()`.
-- После форматирования часть изменений не сразу попала в staging area.
-
-#### Исправления
-
-- Добавлено `@AutoConfigureTestDatabase(replace = NONE)`.
-- В Repository-тесте использован публичный конструктор `Company(String, String, String)`.
-- После форматирования изменённые файлы повторно добавлены через `git add`.
-- Перед коммитами проверены staged diff, тесты и `git status`.
+- Mockito: `when(...)`, `thenReturn(...)` и `verify(...)`.
 
 #### Коммиты
 
@@ -307,45 +376,81 @@
 - `cae42ed Add company lookup by id`
 - `eddab8f Add missing company lookup test`
 
-Все коммиты отправлены на GitHub.
+### 2026-07-08
+
+#### Выполнено
+
+- Реализован `deleteCompany()` в `CompanyService`.
+- Реализован `updateCompany()` в `CompanyService`.
+- Добавлены unit-тесты удаления и обновления.
+- Проверено обновление существующей и отсутствующей компании.
+- Создан `CompanyController`.
+- Реализованы endpoint списка, создания и поиска по `id`.
+- Затем добавлены endpoint удаления и обновления.
+- Все CRUD endpoint проверены вручную.
+- Проверены HTTP-статусы `200`, `201`, `204` и `404`.
+- Все 10 тестов завершились с `BUILD SUCCESS`.
+
+#### Коммиты
+
+- `72e2407 Add company deletion service method`
+- `ed06656 Add company update service method`
+- `833ff27 Add company list endpoint`
+- `a07fe4c Add company creation endpoint`
+- `6c337e3 Add company lookup endpoint`
+- `a07ff7b Update project status after company lookup endpoint`
+- `142f88c Add company deletion endpoint`
+- `6a3838c Add company update endpoint`
+
+### 2026-07-09
+
+#### Выполнено
+
+- Добавлен `CompanyControllerTest`.
+- Добавлен тест `GET /api/companies`.
+- Добавлен тест успешного `GET /api/companies/{id}`.
+- Добавлен тест `404 Not Found` для отсутствующей компании.
+- Добавлен тест `POST /api/companies`.
+- Добавлен тест `DELETE /api/companies/{id}`.
+- Освоены `@WebMvcTest`, `MockMvc`, `@MockitoBean`, JSONPath и `MediaType.APPLICATION_JSON`.
+- Проверены вызовы Service через `verify(...)`.
+- Полный набор из 15 тестов завершился с `BUILD SUCCESS`.
+- Все созданные коммиты отправлены на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
+
+#### Возникшие проблемы и исправления
+
+- IntelliJ случайно добавила лишний статический импорт `AbstractPersistable_.id`; импорт удалён.
+- IntelliJ объединила импорты `MockMvcRequestBuilders` в wildcard; возвращены явные импорты.
+- В PowerShell символ `#` без кавычек воспринимался как начало комментария; Maven-параметр для запуска одного теста заключён в кавычки.
+- Исправлено форматирование аргументов в вызове `delete(...)`.
+
+#### Коммиты
+
+- `dce5d1f Add company list controller test`
+- `ca82a5f Add company lookup controller tests`
+- `514a014 Add company creation controller test`
+- `3a8d8e0 Add company deletion controller test`
 
 #### Следующее действие
 
-- Добавить метод `deleteCompany(Long id)` в `CompanyService`.
-- Добавить unit-тест `shouldDeleteCompanyById`.
-- Проверить вызов Repository через `verify(...)`.
+- Добавить controller-тесты обновления компании через `PUT /api/companies/{id}`.
+- После этого перейти к DTO, validation и единой обработке ошибок.
 
 ## Точка остановки
 
-### 2026-07-08
+### 2026-07-09
 
-- В `CompanyService` реализованы `deleteCompany()` и `updateCompany()`.
-- В `CompanyServiceTest` добавлены тесты удаления и обновления компании.
-- Проверены успешное обновление и попытка обновить отсутствующую компанию.
-- Создан `CompanyController`.
-- Реализован `GET /api/companies`.
-- Реализован `POST /api/companies` с ответом `201 Created`.
-- Реализован `GET /api/companies/{id}`.
-- Вручную проверены ответы `200 OK`, `201 Created` и `404 Not Found`.
-- Всего в проекте 10 тестов, все завершаются с `BUILD SUCCESS`.
-- Последний коммит с кодом: `6c337e3 Add company lookup endpoint`.
-- Все коммиты с кодом отправлены на GitHub.
-- Ветка `main` синхронизирована с `origin/main`.
-- Следующий шаг: реализовать `DELETE /api/companies/{id}`.
-- Перед запуском приложения и интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
-
-### 2026-07-07
-
-- Созданы `CompanyRepository` и `CompanyService`.
-- Реализован метод `createCompany()`.
-- Реализован метод `getAllCompanies()`.
-- Реализован метод `getCompanyById()`.
-- Проверены успешный поиск и отсутствие компании.
-- В `CompanyServiceTest` находится 4 unit-теста.
-- Всего в проекте 7 тестов, все завершаются с `BUILD SUCCESS`.
-- Последний коммит: `eddab8f Add missing company lookup test`.
+- Для `Company` реализован полный CRUD на уровнях Service и Controller.
+- Реализованы все пять CRUD endpoint.
+- Все endpoint проверены вручную.
+- В `CompanyControllerTest` находится 5 тестов.
+- Всего в проекте 15 тестов.
+- Все тесты завершаются с `BUILD SUCCESS`.
+- Последний рабочий коммит: `3a8d8e0 Add company deletion controller test`.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
 - Рабочее дерево чистое.
-- Следующий шаг: реализовать `deleteCompany(Long id)` и unit-тест.
-- Перед запуском всех тестов в новом терминале нужно установить `DB_PASSWORD`.
+- Следующий шаг: добавить controller-тесты для `PUT /api/companies/{id}`.
+- После завершения controller-тестов перейти к DTO, Bean Validation и единой обработке ошибок.
+- Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
