@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,5 +37,28 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$[1].name").value("Yandex"));
 
         verify(companyService).getAllCompanies();
+    }
+
+    @Test
+    void shouldReturnCompanyById() throws Exception {
+        Long companyId = 1L;
+        Company company = new Company("JetBrains", null, null);
+        when(companyService.getCompanyById(companyId))
+                .thenReturn(Optional.of(company));
+        mockMvc.perform(get("/api/companies/{id}", companyId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("JetBrains"));
+        verify(companyService).getCompanyById(companyId);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenCompanyDoesNotExist() throws Exception {
+        Long companyId = 999L;
+
+        when(companyService.getCompanyById(companyId))
+                .thenReturn(Optional.empty());
+        mockMvc.perform(get("/api/companies/{id}", companyId))
+                .andExpect(status().isNotFound());
+        verify(companyService).getCompanyById(companyId);
     }
 }
