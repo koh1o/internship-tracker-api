@@ -13,11 +13,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,12 +71,12 @@ class CompanyControllerTest {
     @Test
     void shouldCreateCompany() throws Exception {
         String requestBody = """
-        {
-          "name": "JetBrains",
-          "website": "https://www.jetbrains.com",
-          "description": "Software development company"
-        }
-        """;
+                {
+                  "name": "JetBrains",
+                  "website": "https://www.jetbrains.com",
+                  "description": "Software development company"
+                }
+                """;
 
         Company createdCompany = new Company(
                 "JetBrains",
@@ -85,8 +87,8 @@ class CompanyControllerTest {
         when(companyService.createCompany(any(Company.class)))
                 .thenReturn(createdCompany);
         mockMvc.perform(post("/api/companies")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("JetBrains"));
         verify(companyService).createCompany(any(Company.class));
@@ -99,5 +101,34 @@ class CompanyControllerTest {
         mockMvc.perform(delete("/api/companies/{id}", companyId))
                 .andExpect(status().isNoContent());
         verify(companyService).deleteCompany(companyId);
+    }
+
+    @Test
+    void shouldUpdateCompany() throws Exception {
+        Long companyId = 1L;
+
+        String requestBody = """
+                {
+                  "name": "JetBrains Updated",
+                  "website": "https://www.jetbrains.com",
+                  "description": "Updated description"
+                }
+                """;
+
+        Company updatedCompany = new Company(
+                "JetBrains Updated",
+                "https://www.jetbrains.com",
+                "Updated description"
+        );
+
+        when(companyService.updateCompany(eq(companyId), any(Company.class)))
+                .thenReturn(Optional.of(updatedCompany));
+
+        mockMvc.perform(put("/api/companies/{id}", companyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("JetBrains Updated"));
+        verify(companyService).updateCompany(eq(companyId), any(Company.class));
     }
 }
