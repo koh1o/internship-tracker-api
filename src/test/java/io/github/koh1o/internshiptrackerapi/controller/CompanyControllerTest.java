@@ -131,4 +131,24 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.name").value("JetBrains Updated"));
         verify(companyService).updateCompany(eq(companyId), any(Company.class));
     }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingMissingCompany() throws Exception {
+        Long companyId = 999L;
+
+        String requestBody = """
+                {
+                  "name": "Missing Company",
+                  "website": "https://example.com",
+                  "description": "Updated description"
+                }
+                """;
+        when(companyService.updateCompany(eq(companyId), any(Company.class)))
+                .thenReturn(Optional.empty());
+        mockMvc.perform(put("/api/companies/{id}", companyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isNotFound());
+        verify(companyService).updateCompany(eq(companyId), any(Company.class));
+    }
 }
