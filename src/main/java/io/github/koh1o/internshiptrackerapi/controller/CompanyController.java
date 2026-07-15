@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
+import io.github.koh1o.internshiptrackerapi.dto.company.CompanyRequest;
 import io.github.koh1o.internshiptrackerapi.dto.company.CompanyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
@@ -42,13 +43,14 @@ public class CompanyController {
     }
 
     @PostMapping
-    public ResponseEntity<Company> createCompany(
-            @RequestBody Company company
+    public ResponseEntity<CompanyResponse> createCompany(
+            @RequestBody CompanyRequest request
     ) {
-        Company savedCompany = companyService.createCompany(company);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(savedCompany);
+        Company company = companyMapper.toEntity(request);
+        Company createdCompany = companyService.createCompany(company);
+        CompanyResponse response = companyMapper.toResponse(createdCompany);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
