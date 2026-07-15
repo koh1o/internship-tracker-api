@@ -2,7 +2,7 @@
 
 ## Текущий этап
 
-Этап 2 — `Company` API переведён с Entity на DTO на уровне Controller.
+Этап 2 — `Company` API переведён с Entity на DTO, добавлена базовая Bean Validation для `CompanyRequest`.
 
 Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены все пять endpoint:
 
@@ -17,7 +17,10 @@
 - `CompanyRequest` — входной DTO;
 - `CompanyResponse` — выходной DTO;
 - ручной `CompanyMapper`;
-- unit-тесты преобразований `CompanyRequest → Company` и `Company → CompanyResponse`.
+- unit-тесты преобразований `CompanyRequest → Company` и `Company → CompanyResponse`;
+- Bean Validation dependency;
+- validation-аннотации для `CompanyRequest`;
+- controller-тесты на невалидные запросы.
 
 `CompanyMapper` зарегистрирован как Spring-компонент через `@Component` и внедрён в `CompanyController`.
 
@@ -29,9 +32,16 @@
 - `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`;
 - `DELETE /api/companies/{id}` возвращает `204 No Content`, тело ответа не требуется.
 
-Всего в проекте 19 тестов. Последний полный запуск завершился с `BUILD SUCCESS`.
+Текущие validation-правила для `CompanyRequest`:
 
-Следующий шаг — добавить Bean Validation для `CompanyRequest`, затем перейти к единому формату ошибок через `@RestControllerAdvice`.
+- `name` обязателен: `@NotBlank`;
+- `name` максимум 100 символов;
+- `website` максимум 255 символов, поле необязательное;
+- `description` максимум 1000 символов, поле необязательное.
+
+Всего в проекте 23 теста. Последний полный запуск завершился с `BUILD SUCCESS`.
+
+Следующий шаг — добавить единый формат ошибок через `@RestControllerAdvice`.
 
 ## Уже выполнено
 
@@ -103,6 +113,7 @@
 - [x] `GET /api/companies/{id}` переведён на возврат `CompanyResponse`.
 - [x] `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
 - [x] `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
+- [x] `POST /api/companies` и `PUT /api/companies/{id}` используют `@Valid`.
 
 ### Controller-тесты
 
@@ -117,10 +128,15 @@
 - [x] Проверено удаление через `DELETE`.
 - [x] Проверено успешное обновление через `PUT`.
 - [x] Проверен `404 Not Found` при обновлении отсутствующей компании.
+- [x] Проверен `400 Bad Request` при создании компании с пустым `name`.
+- [x] Проверен `400 Bad Request` при обновлении компании с пустым `name`.
+- [x] Проверен `400 Bad Request` при создании компании со слишком длинным `name`.
+- [x] Проверен `400 Bad Request` при обновлении компании со слишком длинным `description`.
+- [x] Проверено, что Service не вызывается при невалидных данных.
 - [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
-- [x] Все controller-тесты проходят после перехода Controller на DTO.
+- [x] Все controller-тесты проходят после перехода Controller на DTO и Bean Validation.
 
-### DTO и mapper
+### DTO, mapper и validation
 
 - [x] Создан пакет `dto.company`.
 - [x] Создан `CompanyRequest` как `record`.
@@ -135,7 +151,12 @@
 - [x] Проверено преобразование `CompanyRequest → Company`.
 - [x] Проверено преобразование `Company → CompanyResponse`.
 - [x] Mapper unit-тестируется без запуска Spring-контекста.
-- [x] Все 19 тестов проекта завершились с `BUILD SUCCESS`.
+- [x] Добавлена зависимость `spring-boot-starter-validation`.
+- [x] В `CompanyRequest` добавлены `@NotBlank` и `@Size` для `name`.
+- [x] В `CompanyRequest` добавлен `@Size(max = 255)` для `website`.
+- [x] В `CompanyRequest` добавлен `@Size(max = 1000)` для `description`.
+- [x] В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
+- [x] Все 23 теста проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
@@ -176,7 +197,7 @@
 - `findById()` возвращает `Optional`, потому что запись может отсутствовать.
 - Пароль базы данных передаётся через `DB_PASSWORD`, а не хранится в Git.
 
-### DTO и mapper
+### DTO, mapper и validation
 
 - DTO используется для передачи данных между клиентом и API.
 - Entity описывает модель базы данных и не должна без необходимости становиться внешним контрактом API.
@@ -190,6 +211,10 @@
 - `CompanyMapper.toResponse()` создаёт выходной DTO из Entity.
 - В Controller Entity остаётся внутри приложения, а клиент получает DTO.
 - Service пока продолжает работать с Entity, а DTO используются на границе API.
+- Bean Validation проверяет входные данные до вызова Service.
+- `@Valid` включает проверку validation-аннотаций для `@RequestBody`.
+- `@NotBlank` запрещает `null`, пустую строку и строку только из пробелов.
+- `@Size(max = N)` ограничивает длину строки, но не запрещает `null`.
 
 ### Тестирование
 
@@ -197,6 +222,7 @@
 - Mock заменяет настоящую зависимость.
 - `when(...).thenReturn(...)` задаёт поведение mock.
 - `verify(...)` проверяет вызов метода mock-объекта.
+- `never()` проверяет, что метод не был вызван.
 - `@DataJpaTest` запускает JPA-часть Spring-контекста.
 - `@WebMvcTest` запускает MVC-часть приложения.
 - `MockMvc` выполняет HTTP-подобные запросы без настоящего сервера.
@@ -205,6 +231,7 @@
 - Если в одном вызове используется matcher, остальные аргументы тоже задаются через matchers.
 - Обычный mapper без зависимостей можно тестировать без Spring.
 - Для теста `toResponse()` использован mock `Company`, потому что у Entity нет setters для серверных полей.
+- Невалидный request должен возвращать `400 Bad Request` и не доходить до Service.
 
 ## Что я пока понимаю частично
 
@@ -215,7 +242,6 @@
 - Принципы REST API и выбор HTTP-статусов для ошибок.
 - Устройство `pom.xml` и управление зависимостями Maven.
 - Работу с ветками Git и `merge`.
-- Bean Validation.
 - Единую обработку ошибок через `@RestControllerAdvice`.
 - Использование `ArgumentCaptor`.
 
@@ -226,14 +252,13 @@
 Последний полный запуск тестов:
 
 ```text
-Tests run: 19, Failures: 0, Errors: 0
+Tests run: 23, Failures: 0, Errors: 0
 BUILD SUCCESS
 ```
 
 ## Технический долг
 
 - Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- Входные данные пока не проверяются через Bean Validation.
 - Ошибки пока не имеют единого JSON-формата.
 - Обработка отсутствующей компании пока выполняется непосредственно в Controller через `Optional`.
 - `DELETE` пока всегда возвращает `204 No Content`.
@@ -243,31 +268,33 @@ BUILD SUCCESS
 
 ## Последний рабочий коммит
 
-- Hash: `fb51605`
-- Message: `Use Company DTOs in update endpoint`
-- `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
-- Все основные endpoint `CompanyController` теперь используют DTO там, где есть тело запроса или ответа.
-- Все 19 тестов прошли успешно.
+- Hash: `b6b37b4`
+- Message: `Add Company request length validation`
+- В `CompanyRequest` добавлены ограничения длины для `website` и `description`.
+- Добавлены controller-тесты для слишком длинного `name` и слишком длинного `description`.
+- Все 23 теста прошли успешно.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
 - Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
 
 ## Последние коммиты
 
-- `a1811e5 Use Company mapper in lookup endpoint`
-- `7c86add Update project status after mapper lookup endpoint`
-- `ee036c5 Use Company response DTO in list endpoint`
-- `e644e66 Use Company DTOs in creation endpoint`
+- `2931f1a Add Bean Validation dependency`
+- `87e18c8 Add Company request name validation`
+- `b6b37b4 Add Company request length validation`
+- `011a0c3 Update project status after Company DTO migration`
 - `fb51605 Use Company DTOs in update endpoint`
+- `e644e66 Use Company DTOs in creation endpoint`
 
 ## Следующее задание
 
 1. Обновить `PROJECT_STATUS.md` отдельным коммитом.
-2. Добавить Bean Validation в `CompanyRequest`.
-3. Добавить `@Valid` в `CompanyController` для `POST` и `PUT`.
-4. Добавить controller-тесты на невалидные запросы.
-5. Проверить HTTP-статусы и формат ошибок, который Spring возвращает по умолчанию.
-6. Затем добавить единый формат ошибок через `@RestControllerAdvice`.
+2. Изучить, какой JSON Spring возвращает по умолчанию при validation-ошибке.
+3. Создать единый DTO для ошибок.
+4. Добавить `@RestControllerAdvice`.
+5. Обработать validation-ошибки в едином формате.
+6. Обработать not found ошибки в едином формате.
+7. Постепенно убрать `Optional`-проверки из Controller после введения собственных exception.
 
 ## Критерии завершения текущего подэтапа
 
@@ -285,7 +312,11 @@ BUILD SUCCESS
 - [x] `PUT /api/companies/{id}` возвращает `CompanyResponse`.
 - [x] Controller больше не возвращает Entity напрямую для endpoint с телом ответа.
 - [x] Controller-тесты проходят после перехода на DTO.
-- [x] Все 19 тестов завершаются с `BUILD SUCCESS`.
+- [x] Добавлена зависимость Bean Validation.
+- [x] В `CompanyRequest` добавлены правила для `name`, `website` и `description`.
+- [x] В Controller добавлен `@Valid` для `POST` и `PUT`.
+- [x] Добавлены controller-тесты на невалидные запросы.
+- [x] Все 23 теста завершаются с `BUILD SUCCESS`.
 - [x] Code-коммиты отправлены на GitHub.
 - [ ] `PROJECT_STATUS.md` обновлён, закоммичен и отправлен на GitHub.
 
@@ -308,6 +339,10 @@ BUILD SUCCESS
 15. Какие endpoint теперь принимают `CompanyRequest`?
 16. Какие endpoint теперь возвращают `CompanyResponse`?
 17. Почему для `DELETE /api/companies/{id}` DTO не нужен?
+18. Что делает `@Valid`?
+19. Чем `@NotBlank` отличается от `@Size`?
+20. Почему `@Size(max = 255)` не запрещает `null`?
+21. Почему при validation-ошибке Service не должен вызываться?
 
 ## Журнал прогресса
 
@@ -393,10 +428,14 @@ BUILD SUCCESS
 - `GET /api/companies` переведён на возврат `List<CompanyResponse>`.
 - `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
 - `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
+- Добавлена зависимость `spring-boot-starter-validation`.
+- В `CompanyRequest` добавлены validation-аннотации для `name`, `website` и `description`.
+- В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
+- Добавлены controller-тесты для validation-ошибок.
 - Запускались точечные controller-тесты после каждого изменения.
 - Запускался полный `CompanyControllerTest`.
 - Запускался полный набор тестов проекта.
-- Все 19 тестов завершились с `BUILD SUCCESS`.
+- Все 23 теста завершились с `BUILD SUCCESS`.
 - Code-коммиты отправлены на GitHub.
 
 #### Изучено
@@ -407,6 +446,8 @@ BUILD SUCCESS
 - Как постепенно переводить Controller на DTO, не ломая весь CRUD сразу.
 - Почему Service пока может продолжать работать с Entity, а Controller уже может принимать и возвращать DTO.
 - Как использовать `stream().map(...).toList()` для преобразования списка Entity в список DTO.
+- Как работает базовая Bean Validation для `@RequestBody`.
+- Почему при невалидном request Service не должен вызываться.
 
 #### Коммиты
 
@@ -415,11 +456,15 @@ BUILD SUCCESS
 - `ee036c5 Use Company response DTO in list endpoint`
 - `e644e66 Use Company DTOs in creation endpoint`
 - `fb51605 Use Company DTOs in update endpoint`
+- `011a0c3 Update project status after Company DTO migration`
+- `2931f1a Add Bean Validation dependency`
+- `87e18c8 Add Company request name validation`
+- `b6b37b4 Add Company request length validation`
 
 #### Следующее действие
 
 - Обновить `PROJECT_STATUS.md` отдельным коммитом.
-- Затем добавить Bean Validation в `CompanyRequest`.
+- Затем перейти к единому формату ошибок через `@RestControllerAdvice`.
 
 ## Точка остановки
 
@@ -427,7 +472,7 @@ BUILD SUCCESS
 
 - Для `Company` реализован полный CRUD.
 - Все пять CRUD endpoint проверены вручную.
-- В `CompanyControllerTest` находится 7 тестов.
+- В `CompanyControllerTest` находится 11 тестов.
 - Созданы `CompanyRequest` и `CompanyResponse`.
 - Создан и протестирован ручной `CompanyMapper`.
 - `CompanyMapper` зарегистрирован через `@Component`.
@@ -438,12 +483,15 @@ BUILD SUCCESS
 - `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`.
 - `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`.
 - `DELETE /api/companies/{id}` возвращает `204 No Content`, DTO не нужен.
+- В `CompanyRequest` добавлены validation-правила для `name`, `website` и `description`.
+- В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
+- Validation покрыта controller-тестами.
 - В `CompanyMapperTest` находится 2 unit-теста.
-- Всего в проекте 19 тестов.
+- Всего в проекте 23 теста.
 - Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `fb51605 Use Company DTOs in update endpoint`.
+- Последний рабочий code-коммит: `b6b37b4 Add Company request length validation`.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
 - Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
-- Следующий шаг: закоммитить обновлённый `PROJECT_STATUS.md`, затем добавить Bean Validation для `CompanyRequest`.
+- Следующий шаг: закоммитить обновлённый `PROJECT_STATUS.md`, затем перейти к единому формату ошибок.
 - Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
