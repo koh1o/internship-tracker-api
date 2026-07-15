@@ -75,14 +75,18 @@ public class CompanyController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Company> updateCompany(
+    public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable Long id,
-            @RequestBody Company company
+            @RequestBody CompanyRequest request
     ) {
+        Company company = companyMapper.toEntity(request);
         Optional<Company> updatedCompanyOptional = companyService.updateCompany(id, company);
+
         if (updatedCompanyOptional.isPresent()) {
-            return ResponseEntity.ok(updatedCompanyOptional.get());
+            CompanyResponse response = companyMapper.toResponse(updatedCompanyOptional.get());
+            return ResponseEntity.ok(response);
         }
+
         return ResponseEntity.notFound().build();
     }
 }
