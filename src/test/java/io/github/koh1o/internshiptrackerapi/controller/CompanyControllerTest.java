@@ -193,4 +193,45 @@ class CompanyControllerTest {
 
         verify(companyService, never()).updateCompany(eq(companyId), any(Company.class));
     }
+
+    @Test
+    void shouldReturnBadRequestWhenCreatingCompanyWithTooLongName() throws Exception {
+        String tooLongName = "a".repeat(101);
+
+        String requestBody = """
+                {
+                  "name": "%s",
+                  "website": "https://www.jetbrains.com",
+                  "description": "Software development company"
+                }
+                """.formatted(tooLongName);
+
+        mockMvc.perform(post("/api/companies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+
+        verify(companyService, never()).createCompany(any(Company.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatingCompanyWithTooLongDescription() throws Exception {
+        Long companyId = 1L;
+        String tooLongDescription = "a".repeat(1001);
+
+        String requestBody = """
+                {
+                  "name": "JetBrains",
+                  "website": "https://www.jetbrains.com",
+                  "description": "%s"
+                }
+                """.formatted(tooLongDescription);
+
+        mockMvc.perform(put("/api/companies/{id}", companyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+
+        verify(companyService, never()).updateCompany(eq(companyId), any(Company.class));
+    }
 }
