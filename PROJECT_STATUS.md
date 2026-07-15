@@ -2,7 +2,7 @@
 
 ## Текущий этап
 
-Этап 2 — перевод `Company` API с Entity на DTO.
+Этап 2 — `Company` API переведён с Entity на DTO на уровне Controller.
 
 Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены все пять endpoint:
 
@@ -12,20 +12,26 @@
 - `PUT /api/companies/{id}`;
 - `DELETE /api/companies/{id}`.
 
-Созданы:
+Созданы и подключены:
 
 - `CompanyRequest` — входной DTO;
 - `CompanyResponse` — выходной DTO;
 - ручной `CompanyMapper`;
 - unit-тесты преобразований `CompanyRequest → Company` и `Company → CompanyResponse`.
 
-`CompanyMapper` зарегистрирован как Spring-компонент и внедрён в `CompanyController`.
-Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`.
-Остальные endpoint пока всё ещё принимают или возвращают `Company` Entity напрямую.
+`CompanyMapper` зарегистрирован как Spring-компонент через `@Component` и внедрён в `CompanyController`.
+
+Текущий внешний контракт `CompanyController`:
+
+- `GET /api/companies` возвращает `List<CompanyResponse>`;
+- `GET /api/companies/{id}` возвращает `CompanyResponse`;
+- `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`;
+- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`;
+- `DELETE /api/companies/{id}` возвращает `204 No Content`, тело ответа не требуется.
 
 Всего в проекте 19 тестов. Последний полный запуск завершился с `BUILD SUCCESS`.
 
-Следующий шаг — перевести `GET /api/companies` на возврат `List<CompanyResponse>`.
+Следующий шаг — добавить Bean Validation для `CompanyRequest`, затем перейти к единому формату ошибок через `@RestControllerAdvice`.
 
 ## Уже выполнено
 
@@ -41,7 +47,7 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - [x] Локальная ветка `main` связана с `origin/main`.
 - [x] Проверен `.gitignore`.
 - [x] В Git не добавлены секреты, `.idea/` и `target/`.
-- [x] Последний рабочий коммит с кодом создан локально.
+- [x] Последние рабочие code-коммиты отправлены на GitHub.
 
 ### Spring Boot
 
@@ -93,7 +99,10 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - [x] Вручную проверены ответы `200 OK`, `201 Created`, `204 No Content` и `404 Not Found`.
 - [x] Проверено, что при обновлении сохраняются `id` и `createdAt`, а `updatedAt` изменяется.
 - [x] `CompanyMapper` внедрён в `CompanyController`.
+- [x] `GET /api/companies` переведён на возврат `List<CompanyResponse>`.
 - [x] `GET /api/companies/{id}` переведён на возврат `CompanyResponse`.
+- [x] `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
+- [x] `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
 
 ### Controller-тесты
 
@@ -109,6 +118,7 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - [x] Проверено успешное обновление через `PUT`.
 - [x] Проверен `404 Not Found` при обновлении отсутствующей компании.
 - [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
+- [x] Все controller-тесты проходят после перехода Controller на DTO.
 
 ### DTO и mapper
 
@@ -137,7 +147,8 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - `git push` отправляет коммиты на GitHub.
 - `git diff` показывает незастейдженные изменения.
 - `git diff --cached` показывает содержимое будущего коммита.
-- `working tree clean` не означает, что локальные коммиты уже отправлены.
+- `working tree clean` означает, что нет незакоммиченных изменений в файлах.
+- `Your branch is up to date with 'origin/main'` означает, что локальная ветка синхронизирована с GitHub.
 - `.gitignore` исключает служебные и генерируемые файлы.
 
 ### Архитектура и Spring
@@ -149,6 +160,7 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - Constructor injection передаёт зависимости через конструктор.
 - `ResponseEntity` позволяет управлять HTTP-статусом и телом ответа.
 - Spring создаёт управляемые объекты для классов с подходящими аннотациями.
+- Bean — объект, который создаёт и хранит Spring.
 - `@Component` позволяет зарегистрировать обычный класс как Spring bean.
 - `@Import` в test context позволяет явно добавить нужный класс в `@WebMvcTest`.
 
@@ -176,7 +188,8 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 - Ручной mapper явно показывает, какие поля копируются.
 - `CompanyMapper.toEntity()` создаёт Entity из входного DTO.
 - `CompanyMapper.toResponse()` создаёт выходной DTO из Entity.
-- В Controller Entity можно оставить внутри приложения, а клиенту вернуть DTO.
+- В Controller Entity остаётся внутри приложения, а клиент получает DTO.
+- Service пока продолжает работать с Entity, а DTO используются на границе API.
 
 ### Тестирование
 
@@ -197,7 +210,6 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 
 - Как Spring сканирует пакеты и создаёт компоненты.
 - Полный механизм dependency injection внутри Spring.
-- Зачем mapper регистрировать через `@Component`.
 - Чем `@Import(CompanyMapper.class)` в тесте отличается от обычного component scanning.
 - Полную структуру HTTP-запроса и HTTP-ответа.
 - Принципы REST API и выбор HTTP-статусов для ошибок.
@@ -214,15 +226,13 @@ Endpoint `GET /api/companies/{id}` уже возвращает `CompanyResponse`
 Последний полный запуск тестов:
 
 ```text
-Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 19, Failures: 0, Errors: 0
 BUILD SUCCESS
 ```
 
 ## Технический долг
 
 - Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- DTO пока подключены только к `GET /api/companies/{id}`.
-- `GET /api/companies`, `POST /api/companies` и `PUT /api/companies/{id}` пока всё ещё возвращают или принимают Entity напрямую.
 - Входные данные пока не проверяются через Bean Validation.
 - Ошибки пока не имеют единого JSON-формата.
 - Обработка отсутствующей компании пока выполняется непосредственно в Controller через `Optional`.
@@ -233,36 +243,31 @@ BUILD SUCCESS
 
 ## Последний рабочий коммит
 
-- Hash: `a1811e5`
-- Message: `Use Company mapper in lookup endpoint`
-- `CompanyMapper` зарегистрирован через `@Component`.
-- `CompanyMapper` внедрён в `CompanyController`.
-- `GET /api/companies/{id}` переведён на возврат `CompanyResponse`.
-- `CompanyControllerTest` обновлён через `@Import(CompanyMapper.class)`.
+- Hash: `fb51605`
+- Message: `Use Company DTOs in update endpoint`
+- `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
+- Все основные endpoint `CompanyController` теперь используют DTO там, где есть тело запроса или ответа.
 - Все 19 тестов прошли успешно.
-- Коммит создан локально.
-- Ветка `main` опережает `origin/main` на 1 коммит.
-- `PROJECT_STATUS.md` ещё не закоммичен.
+- Коммит отправлен на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
+- Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
 
 ## Последние коммиты
 
-- `559ce0a Add company update controller test`
-- `1e3b33a Add missing company update controller test`
-- `25fc666 Update project status before Company DTO stage`
-- `291b89f Add Company DTOs and mapper`
 - `a1811e5 Use Company mapper in lookup endpoint`
+- `7c86add Update project status after mapper lookup endpoint`
+- `ee036c5 Use Company response DTO in list endpoint`
+- `e644e66 Use Company DTOs in creation endpoint`
+- `fb51605 Use Company DTOs in update endpoint`
 
 ## Следующее задание
 
-1. Перевести `GET /api/companies` на возврат `List<CompanyResponse>`.
-2. Обновить controller-тест списка компаний под DTO.
-3. Запустить `CompanyControllerTest`.
-4. Запустить полный набор тестов.
-5. Сделать отдельный небольшой коммит.
-6. Затем перевести `POST /api/companies` на `CompanyRequest` и `CompanyResponse`.
-7. Затем перевести `PUT /api/companies/{id}` на `CompanyRequest` и `CompanyResponse`.
-8. После миграции Controller добавить Bean Validation.
-9. Добавить единый формат ошибок через `@RestControllerAdvice`.
+1. Обновить `PROJECT_STATUS.md` отдельным коммитом.
+2. Добавить Bean Validation в `CompanyRequest`.
+3. Добавить `@Valid` в `CompanyController` для `POST` и `PUT`.
+4. Добавить controller-тесты на невалидные запросы.
+5. Проверить HTTP-статусы и формат ошибок, который Spring возвращает по умолчанию.
+6. Затем добавить единый формат ошибок через `@RestControllerAdvice`.
 
 ## Критерии завершения текущего подэтапа
 
@@ -272,17 +277,17 @@ BUILD SUCCESS
 - [x] Mapper покрыт unit-тестами.
 - [x] `CompanyMapper` зарегистрирован как Spring-компонент.
 - [x] Mapper внедрён в `CompanyController`.
+- [x] `GET /api/companies` возвращает `List<CompanyResponse>`.
 - [x] `GET /api/companies/{id}` возвращает `CompanyResponse`.
-- [x] Controller-тесты проходят после подключения mapper.
+- [x] `POST /api/companies` принимает `CompanyRequest`.
+- [x] `POST /api/companies` возвращает `CompanyResponse`.
+- [x] `PUT /api/companies/{id}` принимает `CompanyRequest`.
+- [x] `PUT /api/companies/{id}` возвращает `CompanyResponse`.
+- [x] Controller больше не возвращает Entity напрямую для endpoint с телом ответа.
+- [x] Controller-тесты проходят после перехода на DTO.
 - [x] Все 19 тестов завершаются с `BUILD SUCCESS`.
-- [ ] `GET /api/companies` возвращает `List<CompanyResponse>`.
-- [ ] `POST /api/companies` принимает `CompanyRequest`.
-- [ ] `POST /api/companies` возвращает `CompanyResponse`.
-- [ ] `PUT /api/companies/{id}` принимает `CompanyRequest`.
-- [ ] `PUT /api/companies/{id}` возвращает `CompanyResponse`.
-- [ ] Controller больше не возвращает Entity напрямую.
-- [ ] Controller-тесты обновлены под DTO.
-- [ ] Code-коммиты и status-коммит отправлены на GitHub.
+- [x] Code-коммиты отправлены на GitHub.
+- [ ] `PROJECT_STATUS.md` обновлён, закоммичен и отправлен на GitHub.
 
 ## Вопросы для повторения
 
@@ -298,8 +303,11 @@ BUILD SUCCESS
 10. Почему для теста `toResponse()` использован mock `Company`?
 11. Что нужно сделать, чтобы Spring смог внедрить `CompanyMapper` в Controller?
 12. Почему в `CompanyControllerTest` понадобился `@Import(CompanyMapper.class)`?
-13. Чем `@WebMvcTest` отличается от обычного unit-теста mapper?
-14. Почему `GET /api/companies/{id}` теперь возвращает `ResponseEntity<CompanyResponse>`, а Service всё ещё возвращает `Optional<Company>`?
+13. Почему `@WebMvcTest` сам не подгрузил обычный `@Component`?
+14. Почему Service пока продолжает работать с Entity?
+15. Какие endpoint теперь принимают `CompanyRequest`?
+16. Какие endpoint теперь возвращают `CompanyResponse`?
+17. Почему для `DELETE /api/companies/{id}` DTO не нужен?
 
 ## Журнал прогресса
 
@@ -382,11 +390,14 @@ BUILD SUCCESS
 - `CompanyMapper` внедрён в `CompanyController` через конструктор.
 - Endpoint `GET /api/companies/{id}` переведён с `Company` на `CompanyResponse`.
 - В `CompanyControllerTest` добавлен `@Import(CompanyMapper.class)`.
-- Запущен точечный тест `CompanyControllerTest#shouldReturnCompanyById`.
-- Запущен весь `CompanyControllerTest`.
-- Запущен полный набор тестов проекта.
+- `GET /api/companies` переведён на возврат `List<CompanyResponse>`.
+- `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
+- `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
+- Запускались точечные controller-тесты после каждого изменения.
+- Запускался полный `CompanyControllerTest`.
+- Запускался полный набор тестов проекта.
 - Все 19 тестов завершились с `BUILD SUCCESS`.
-- Создан code-коммит `a1811e5 Use Company mapper in lookup endpoint`.
+- Code-коммиты отправлены на GitHub.
 
 #### Изучено
 
@@ -394,12 +405,21 @@ BUILD SUCCESS
 - Почему `@WebMvcTest` не всегда загружает обычные `@Component`.
 - Как явно добавить mapper в controller-тест через `@Import`.
 - Как постепенно переводить Controller на DTO, не ломая весь CRUD сразу.
-- Почему Service пока может продолжать работать с Entity, а Controller уже может возвращать DTO.
+- Почему Service пока может продолжать работать с Entity, а Controller уже может принимать и возвращать DTO.
+- Как использовать `stream().map(...).toList()` для преобразования списка Entity в список DTO.
+
+#### Коммиты
+
+- `a1811e5 Use Company mapper in lookup endpoint`
+- `7c86add Update project status after mapper lookup endpoint`
+- `ee036c5 Use Company response DTO in list endpoint`
+- `e644e66 Use Company DTOs in creation endpoint`
+- `fb51605 Use Company DTOs in update endpoint`
 
 #### Следующее действие
 
 - Обновить `PROJECT_STATUS.md` отдельным коммитом.
-- Затем перевести `GET /api/companies` на `List<CompanyResponse>`.
+- Затем добавить Bean Validation в `CompanyRequest`.
 
 ## Точка остановки
 
@@ -412,13 +432,18 @@ BUILD SUCCESS
 - Создан и протестирован ручной `CompanyMapper`.
 - `CompanyMapper` зарегистрирован через `@Component`.
 - `CompanyMapper` внедрён в `CompanyController`.
+- Все основные endpoint `CompanyController` переведены на DTO там, где DTO нужен.
+- `GET /api/companies` возвращает `List<CompanyResponse>`.
 - `GET /api/companies/{id}` возвращает `CompanyResponse`.
-- Остальные endpoint пока ещё используют `Company` Entity напрямую.
+- `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`.
+- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`.
+- `DELETE /api/companies/{id}` возвращает `204 No Content`, DTO не нужен.
 - В `CompanyMapperTest` находится 2 unit-теста.
 - Всего в проекте 19 тестов.
 - Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `a1811e5 Use Company mapper in lookup endpoint`.
-- Коммит создан локально, но ещё не отправлен на GitHub.
-- `PROJECT_STATUS.md` ещё не закоммичен.
-- Следующий шаг: закоммитить обновлённый `PROJECT_STATUS.md`, затем перевести `GET /api/companies` на `List<CompanyResponse>`.
+- Последний рабочий code-коммит: `fb51605 Use Company DTOs in update endpoint`.
+- Коммит отправлен на GitHub.
+- Ветка `main` синхронизирована с `origin/main`.
+- Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
+- Следующий шаг: закоммитить обновлённый `PROJECT_STATUS.md`, затем добавить Bean Validation для `CompanyRequest`.
 - Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
