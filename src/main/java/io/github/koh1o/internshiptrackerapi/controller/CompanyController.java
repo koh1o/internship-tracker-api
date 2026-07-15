@@ -33,8 +33,12 @@ public class CompanyController {
     }
 
     @GetMapping
-    public List<Company> getAllCompanies() {
-        return companyService.getAllCompanies();
+    public List<CompanyResponse> getAllCompanies() {
+        List<Company> companies = companyService.getAllCompanies();
+
+        return companies.stream()
+                .map(companyMapper::toResponse)
+                .toList();
     }
 
     @PostMapping
