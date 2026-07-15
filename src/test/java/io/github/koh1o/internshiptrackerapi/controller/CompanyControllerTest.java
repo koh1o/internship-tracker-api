@@ -237,7 +237,14 @@ class CompanyControllerTest {
         mockMvc.perform(put("/api/companies/{id}", companyId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validation failed"))
+                .andExpect(jsonPath("$.message").value("Invalid request data"))
+                .andExpect(jsonPath("$.path").value("/api/companies/1"))
+                .andExpect(jsonPath("$.fieldErrors.description")
+                        .value("Company description must be at most 1000 characters"));
 
         verify(companyService, never()).updateCompany(eq(companyId), any(Company.class));
     }
