@@ -3,7 +3,9 @@ package io.github.koh1o.internshiptrackerapi.mapper;
 import io.github.koh1o.internshiptrackerapi.dto.company.CompanyRequest;
 import io.github.koh1o.internshiptrackerapi.dto.company.CompanyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CompanyMapper {
     public Company toEntity(CompanyRequest request) {
         return new Company(request.name(), request.website(), request.description());

@@ -1,6 +1,8 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
+import io.github.koh1o.internshiptrackerapi.dto.company.CompanyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
 import io.github.koh1o.internshiptrackerapi.service.CompanyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +22,14 @@ import java.util.Optional;
 @RequestMapping("/api/companies")
 public class CompanyController {
     private final CompanyService companyService;
+    private final CompanyMapper companyMapper;
 
-    public CompanyController(CompanyService companyService) {
+    public CompanyController(
+            CompanyService companyService,
+            CompanyMapper companyMapper
+    ) {
         this.companyService = companyService;
+        this.companyMapper = companyMapper;
     }
 
     @GetMapping
@@ -41,15 +48,16 @@ public class CompanyController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Company> getCompanyById(
+    public ResponseEntity<CompanyResponse> getCompanyById(
             @PathVariable Long id
     ) {
         Optional<Company> companyOptional = companyService.getCompanyById(id);
         if (companyOptional.isPresent()) {
-            return ResponseEntity.ok(companyOptional.get());
-        } else {
-            return ResponseEntity.notFound().build();
+            CompanyResponse response = companyMapper.toResponse(companyOptional.get());
+            return ResponseEntity.ok(response);
         }
+
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
