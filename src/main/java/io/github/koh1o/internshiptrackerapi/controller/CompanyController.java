@@ -5,6 +5,7 @@ import io.github.koh1o.internshiptrackerapi.dto.company.CompanyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
 import io.github.koh1o.internshiptrackerapi.service.CompanyService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,7 +45,7 @@ public class CompanyController {
 
     @PostMapping
     public ResponseEntity<CompanyResponse> createCompany(
-            @RequestBody CompanyRequest request
+            @Valid @RequestBody CompanyRequest request
     ) {
         Company company = companyMapper.toEntity(request);
         Company createdCompany = companyService.createCompany(company);
@@ -77,7 +78,7 @@ public class CompanyController {
     @PutMapping("/{id}")
     public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable Long id,
-            @RequestBody CompanyRequest request
+            @Valid @RequestBody CompanyRequest request
     ) {
         Company company = companyMapper.toEntity(request);
         Optional<Company> updatedCompanyOptional = companyService.updateCompany(id, company);
