@@ -2,7 +2,7 @@
 
 ## Текущий этап
 
-Этап 2 — `Company` API переведён с Entity на DTO, добавлена Bean Validation и единый формат ошибок для validation-ошибок и `404 Not Found` в Company API.
+Этап 3 — начата реализация `Vacancy`: создана модель данных вакансии, enum `WorkFormat`, `VacancyRepository` и repository-тесты.
 
 Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены пять endpoint:
 
@@ -55,9 +55,9 @@
 }
 ```
 
-Всего в проекте 23 теста. Последний полный запуск завершился с `BUILD SUCCESS`.
+Всего в проекте 27 тестов. Последний полный запуск завершился с `BUILD SUCCESS`.
 
-Следующий шаг — обновить `PROJECT_STATUS.md` отдельным status-коммитом, затем перейти к следующей крупной части: `Vacancy` и связь `Many-to-One` с `Company`.
+Следующий шаг — обновить `PROJECT_STATUS.md` отдельным status-коммитом. После этого это хорошая точка для перехода в чат 03: там продолжить с `Vacancy DTO`, mapper, service и controller.
 
 ## Уже выполнено
 
@@ -96,6 +96,13 @@
 - [x] Настроены JPA-аннотации и ограничения столбцов.
 - [x] Добавлено заполнение `createdAt` и `updatedAt` через `@PrePersist` и `@PreUpdate`.
 - [x] Hibernate создаёт таблицу `companies`.
+- [x] Создан enum `WorkFormat`: `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
+- [x] Создана JPA-сущность `Vacancy`.
+- [x] Добавлены поля `id`, `company`, `title`, `link`, `city`, `workFormat`, `description`, `createdAt`, `updatedAt`.
+- [x] Настроена связь `Many-to-One` от `Vacancy` к `Company` через `company_id`.
+- [x] Для `workFormat` используется `@Enumerated(EnumType.STRING)`.
+- [x] Если `workFormat` равен `null`, он заменяется на `WorkFormat.NOT_SPECIFIED`.
+- [x] Для `Vacancy` добавлено заполнение `createdAt` и `updatedAt` через `@PrePersist` и `@PreUpdate`.
 
 ### Repository
 
@@ -105,6 +112,11 @@
 - [x] Проверены сохранение и чтение `Company` через PostgreSQL.
 - [x] В Repository-тестах используется `@DataJpaTest`.
 - [x] PostgreSQL не заменяется встроенной базой благодаря `@AutoConfigureTestDatabase(replace = NONE)`.
+- [x] Создан `VacancyRepository`.
+- [x] `VacancyRepository` наследуется от `JpaRepository<Vacancy, Long>`.
+- [x] Создан `VacancyRepositoryTest`.
+- [x] Проверено внедрение `VacancyRepository`.
+- [x] Проверено сохранение и чтение `Vacancy` вместе с обязательной связью на `Company`.
 
 ### Service
 
@@ -192,7 +204,7 @@
 - [x] Обработан `ResourceNotFoundException`.
 - [x] Validation-ошибки возвращаются как JSON `ErrorResponse`.
 - [x] Not found ошибки для `GET`, `PUT` и `DELETE` возвращаются как JSON `ErrorResponse`.
-- [x] Все 23 теста проекта завершились с `BUILD SUCCESS`.
+- [x] Все 27 тестов проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
 
@@ -228,6 +240,11 @@
 ### JPA и PostgreSQL
 
 - `@Entity` связывает класс с таблицей базы данных.
+- `@ManyToOne` описывает связь many-to-one: много `Vacancy` могут ссылаться на одну `Company`.
+- `FetchType.LAZY` означает, что связанная `Company` загружается не сразу, а при обращении к ней.
+- `@JoinColumn(name = "company_id")` задаёт внешний ключ в таблице `vacancies`.
+- `@Enumerated(EnumType.STRING)` сохраняет enum в базе как строку, а не как число.
+- Repository-тесты с `@DataJpaTest` проверяют реальные JPA-маппинги и работу с БД.
 - `@Id` обозначает первичный ключ.
 - `@GeneratedValue` настраивает генерацию идентификатора.
 - `@Column` задаёт свойства столбца.
@@ -305,14 +322,14 @@
 Последний полный запуск тестов:
 
 ```text
-Tests run: 23, Failures: 0, Errors: 0
+Tests run: 27, Failures: 0, Errors: 0
 BUILD SUCCESS
 ```
 
 ## Технический долг
 
 - Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- Единый формат ошибок пока реализован для validation-ошибок и not found ошибок в `GET`/`PUT` Company.
+- Единый формат ошибок реализован для validation-ошибок и not found ошибок в `GET`/`PUT`/`DELETE` Company.
 - `DELETE /api/companies/{id}` теперь возвращает `404 Not Found` с JSON `ErrorResponse`, если компания отсутствует.
 - Обработка отсутствующей компании выполняется через `ResourceNotFoundException`: для `GET` и `PUT` exception выбрасывается в Controller, для `DELETE` — в Service.
 - Схема базы данных пока управляется Hibernate; Flyway будет добавлен позже.
@@ -321,12 +338,13 @@ BUILD SUCCESS
 
 ## Последний рабочий code-коммит
 
-- Hash: `8867709`
-- Message: `Handle delete not found errors`
-- В `CompanyService.deleteCompany(id)` добавлена проверка существования компании через `existsById(id)`.
-- Если компания отсутствует, `deleteCompany(id)` выбрасывает `ResourceNotFoundException`.
-- Добавлены service- и controller-тесты для `DELETE /api/companies/{id}`, если компания не найдена.
-- Все 23 теста прошли успешно.
+- Hash: `c5929d3`
+- Message: `Add Vacancy entity`
+- Добавлен enum `WorkFormat`.
+- Добавлена JPA-сущность `Vacancy` со связью `Many-to-One` к `Company`.
+- Добавлен `VacancyRepository`.
+- Добавлен `VacancyRepositoryTest` для проверки сохранения и чтения вакансии через PostgreSQL.
+- Все 27 тестов прошли успешно.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
 - Рабочее дерево чистое перед обновлением `PROJECT_STATUS.md`.
@@ -338,6 +356,8 @@ BUILD SUCCESS
 - `773760d Handle update not found errors`
 - `72fa767 Update project status after not found handling`
 - `8867709 Handle delete not found errors`
+- `75348b4 Update project status after delete error handling`
+- `c5929d3 Add Vacancy entity`
 - `c2cc04f Add error response DTO`
 - `1cfe9dc Handle validation errors`
 - `11ab7d1 Verify update validation error response`
@@ -345,11 +365,9 @@ BUILD SUCCESS
 ## Следующее задание
 
 1. Обновить локальный `PROJECT_STATUS.md` этим файлом и сделать отдельный status-коммит.
-2. Перейти к сущности `Vacancy`.
-3. Создать `WorkFormat` enum.
-4. Создать `Vacancy` entity со связью `Many-to-One` с `Company`.
-5. Создать `VacancyRepository`.
-6. Начать реализацию `VacancyService` и первых тестов.
+2. Перейти в чат 03.
+3. В чате 03 начать следующий блок: `Vacancy DTO`, `VacancyMapper`, `VacancyService`, `VacancyController`.
+4. После DTO и service добавить validation и обработку `404` для `Vacancy`.
 
 ## Критерии завершения текущего подэтапа
 
@@ -381,10 +399,10 @@ BUILD SUCCESS
 - [x] Not found ошибки для `DELETE /api/companies/{id}` возвращаются в едином JSON-формате.
 - [x] JSON not found ошибок покрыт controller-тестами для `GET`, `PUT` и `DELETE`.
 - [x] Поведение `DELETE /api/companies/{id}` для отсутствующего `id` уточнено: возвращается `404 Not Found` с JSON `ErrorResponse`.
-- [x] Все 23 теста завершаются с `BUILD SUCCESS`.
+- [x] Все 27 тестов завершаются с `BUILD SUCCESS`.
 - [x] Code-коммиты отправлены на GitHub.
 - [x] Уточнено поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
-- [ ] `PROJECT_STATUS.md` обновлён и отправлен на GitHub после завершения блока `DELETE` not found.
+- [x] `PROJECT_STATUS.md` обновлён и отправлен на GitHub после завершения блока `DELETE` not found.
 
 ## Вопросы для повторения
 
@@ -517,7 +535,7 @@ BUILD SUCCESS
 - Запускались точечные controller-тесты после каждого изменения.
 - Запускался полный `CompanyControllerTest`.
 - Запускался полный набор тестов проекта.
-- Все 23 теста завершились с `BUILD SUCCESS`.
+- Все 27 тестов завершились с `BUILD SUCCESS`.
 - Code-коммиты отправлены на GitHub.
 
 #### Изучено
@@ -569,11 +587,20 @@ BUILD SUCCESS
 - Добавлен service-тест `shouldThrowResourceNotFoundExceptionWhenDeletingMissingCompany`.
 - Добавлен controller-тест `shouldReturnNotFoundWhenDeletingMissingCompany`.
 - Коммит `Handle delete not found errors` отправлен на GitHub.
+- Обновлён `PROJECT_STATUS.md` после delete error handling.
+- Создан enum `WorkFormat`.
+- Создана JPA-сущность `Vacancy`.
+- Настроена связь `Many-to-One` от `Vacancy` к `Company`.
+- Создан `VacancyRepository`.
+- Создан `VacancyRepositoryTest`.
+- Проверено сохранение и чтение `Vacancy` через PostgreSQL.
+- Полный набор тестов проекта прошёл: 27 tests, `BUILD SUCCESS`.
+- Коммит `Add Vacancy entity` отправлен на GitHub.
 - Запускался точечный тест для `GET` not found.
 - Запускался точечный тест для `PUT` not found.
 - Запускался полный `CompanyControllerTest`.
 - Запускался полный набор тестов проекта.
-- Все 23 теста завершились с `BUILD SUCCESS`.
+- Все 27 тестов завершились с `BUILD SUCCESS`.
 
 #### Изучено
 
@@ -587,6 +614,10 @@ BUILD SUCCESS
 - Как тестировать `void` метод Mockito через `doThrow(...).when(...).method(...)`.
 - Почему после добавления `existsById(id)` нужно обновить старый service-тест удаления.
 - Что `DELETE` может возвращать `404`, если API хочет явно сообщать клиенту, что ресурс не найден.
+- Что `enum` ограничивает набор допустимых значений.
+- Почему в Entity `Vacancy` хранится объект `Company`, а не только `companyId`.
+- Почему `WorkFormat` лучше сохранять через `EnumType.STRING`.
+- Почему Mockito `verify(...)` не используется для реального repository в `@DataJpaTest`.
 
 #### Коммиты
 
@@ -595,11 +626,14 @@ BUILD SUCCESS
 - `773760d Handle update not found errors`
 - `72fa767 Update project status after not found handling`
 - `8867709 Handle delete not found errors`
+- `75348b4 Update project status after delete error handling`
+- `c5929d3 Add Vacancy entity`
 
 #### Следующее действие
 
 - Обновить `PROJECT_STATUS.md` в репозитории отдельным status-коммитом.
-- Затем перейти к `Vacancy` и связи `Many-to-One` с `Company`.
+- После status-коммита перейти в чат 03.
+- В чате 03 продолжить с `Vacancy DTO`, mapper, service и controller.
 
 ## Точка остановки
 
@@ -627,11 +661,13 @@ BUILD SUCCESS
 - Validation-ошибки возвращаются в едином JSON-формате.
 - `404 Not Found` для `GET`, `PUT` и `DELETE` возвращается в едином JSON-формате.
 - В `CompanyMapperTest` находится 2 unit-теста.
-- Всего в проекте 23 теста.
+- Созданы `WorkFormat`, `Vacancy`, `VacancyRepository`, `VacancyRepositoryTest`.
+- `VacancyRepositoryTest` проверяет сохранение и чтение вакансии с обязательной связью на компанию.
+- Всего в проекте 27 тестов.
 - Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `8867709 Handle delete not found errors`.
+- Последний рабочий code-коммит: `c5929d3 Add Vacancy entity`.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
 - Рабочее дерево чистое перед обновлением `PROJECT_STATUS.md`.
-- Следующий шаг: обновить `PROJECT_STATUS.md` отдельным коммитом, затем перейти к `Vacancy`.
+- Следующий шаг: обновить `PROJECT_STATUS.md` отдельным коммитом, затем перейти в чат 03.
 - Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
