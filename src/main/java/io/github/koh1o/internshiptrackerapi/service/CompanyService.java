@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,10 @@ public class CompanyService {
     }
 
     public void deleteCompany(Long id) {
+        if (!companyRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Company not found with id: " + id);
+        }
+
         companyRepository.deleteById(id);
     }
 

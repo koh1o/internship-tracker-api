@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.repository.CompanyRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -79,7 +81,13 @@ public class CompanyServiceTest {
     @Test
     void shouldDeleteCompanyById() {
         Long id = 1L;
+
+        when(companyRepository.existsById(id))
+                .thenReturn(true);
+
         companyService.deleteCompany(id);
+
+        verify(companyRepository).existsById(id);
         verify(companyRepository).deleteById(id);
     }
 
@@ -138,5 +146,21 @@ public class CompanyServiceTest {
 
         verify(companyRepository).findById(id);
         verify(companyRepository, never()).save(any(Company.class));
+    }
+
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenDeletingMissingCompany() {
+        Long companyId = 999L;
+
+        when(companyRepository.existsById(companyId))
+                .thenReturn(false);
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> companyService.deleteCompany(companyId)
+        );
+
+        verify(companyRepository).existsById(companyId);
+        verify(companyRepository, never()).deleteById(companyId);
     }
 }

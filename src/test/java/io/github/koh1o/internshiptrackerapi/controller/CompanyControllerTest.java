@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
 import io.github.koh1o.internshiptrackerapi.service.CompanyService;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -261,5 +263,25 @@ class CompanyControllerTest {
                         .value("Company description must be at most 1000 characters"));
 
         verify(companyService, never()).updateCompany(eq(companyId), any(Company.class));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingMissingCompany() throws Exception {
+        Long companyId = 999L;
+
+        doThrow(new ResourceNotFoundException("Company not found with id: " + companyId))
+                .when(companyService)
+                .deleteCompany(companyId);
+
+        mockMvc.perform(delete("/api/companies/{id}", companyId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Company not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/companies/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(companyService).deleteCompany(companyId);
     }
 }
