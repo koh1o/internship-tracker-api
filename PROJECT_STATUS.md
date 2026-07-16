@@ -2,9 +2,9 @@
 
 ## Текущий этап
 
-Этап 2 — `Company` API переведён с Entity на DTO, добавлена Bean Validation и начат единый формат ошибок.
+Этап 2 — `Company` API переведён с Entity на DTO, добавлена Bean Validation и единый формат ошибок для validation-ошибок и части `404 Not Found`.
 
-Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены все пять endpoint:
+Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены пять endpoint:
 
 - `GET /api/companies`;
 - `POST /api/companies`;
@@ -15,9 +15,9 @@
 Текущий внешний контракт `CompanyController`:
 
 - `GET /api/companies` возвращает `List<CompanyResponse>`;
-- `GET /api/companies/{id}` возвращает `CompanyResponse`;
+- `GET /api/companies/{id}` возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`;
 - `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`;
-- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`;
+- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`;
 - `DELETE /api/companies/{id}` возвращает `204 No Content`, тело ответа не требуется.
 
 Текущие validation-правила для `CompanyRequest`:
@@ -27,9 +27,9 @@
 - `website` максимум 255 символов, поле необязательное;
 - `description` максимум 1000 символов, поле необязательное.
 
-Для validation-ошибок уже добавлен единый JSON-ответ через `GlobalExceptionHandler` и `ErrorResponse`.
+Для validation-ошибок и not found ошибок уже используется единый JSON-ответ через `GlobalExceptionHandler` и `ErrorResponse`.
 
-Пример текущего ответа при validation-ошибке:
+Пример validation-ошибки:
 
 ```json
 {
@@ -43,9 +43,21 @@
 }
 ```
 
+Пример not found ошибки:
+
+```json
+{
+  "status": 404,
+  "error": "Not found",
+  "message": "Company not found with id: 999",
+  "path": "/api/companies/999",
+  "fieldErrors": {}
+}
+```
+
 Всего в проекте 23 теста. Последний полный запуск завершился с `BUILD SUCCESS`.
 
-Следующий шаг — перейти к единому формату `404 Not Found`: создать `ResourceNotFoundException`, обработать его в `GlobalExceptionHandler`, затем постепенно убрать `Optional`-проверки из Controller.
+Следующий шаг — уточнить поведение `DELETE /api/companies/{id}` для отсутствующего `id`, затем завершить текущий подэтап обработки ошибок и перейти к следующей крупной части: `Vacancy` и связь `Many-to-One` с `Company`.
 
 ## Уже выполнено
 
@@ -62,7 +74,7 @@
 - [x] Проверен `.gitignore`.
 - [x] В Git не добавлены секреты, `.idea/` и `target/`.
 - [x] Последние рабочие code-коммиты отправлены на GitHub.
-- [x] На момент остановки рабочее дерево чистое, ветка `main` синхронизирована с `origin/main`.
+- [x] На момент остановки рабочее дерево было чистым, ветка `main` синхронизирована с `origin/main`.
 
 ### Spring Boot
 
@@ -119,6 +131,8 @@
 - [x] `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
 - [x] `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
 - [x] `POST /api/companies` и `PUT /api/companies/{id}` используют `@Valid`.
+- [x] `GET /api/companies/{id}` выбрасывает `ResourceNotFoundException`, если компания не найдена.
+- [x] `PUT /api/companies/{id}` выбрасывает `ResourceNotFoundException`, если компания не найдена.
 
 ### Controller-тесты
 
@@ -140,8 +154,10 @@
 - [x] Проверено, что Service не вызывается при невалидных данных.
 - [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `POST`.
 - [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `PUT`.
+- [x] Проверен JSON-ответ `ErrorResponse` для `GET /api/companies/{id}`, если компания не найдена.
+- [x] Проверен JSON-ответ `ErrorResponse` для `PUT /api/companies/{id}`, если компания не найдена.
 - [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
-- [x] Все controller-тесты проходят после перехода Controller на DTO, Bean Validation и обработки validation-ошибок.
+- [x] Все controller-тесты проходят после перехода Controller на DTO, Bean Validation и обработку ошибок.
 
 ### DTO, mapper, validation и errors
 
@@ -170,7 +186,10 @@
 - [x] Создан `GlobalExceptionHandler`.
 - [x] `GlobalExceptionHandler` помечен `@RestControllerAdvice`.
 - [x] Обработан `MethodArgumentNotValidException`.
+- [x] Создан `ResourceNotFoundException`.
+- [x] Обработан `ResourceNotFoundException`.
 - [x] Validation-ошибки возвращаются как JSON `ErrorResponse`.
+- [x] Not found ошибки для `GET` и `PUT` возвращаются как JSON `ErrorResponse`.
 - [x] Все 23 теста проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
@@ -201,6 +220,8 @@
 - `@Import` в test context позволяет явно добавить нужный класс в `@WebMvcTest`.
 - `@RestControllerAdvice` позволяет централизованно обрабатывать ошибки из controller-слоя.
 - `@ExceptionHandler` связывает конкретный тип исключения с методом обработки.
+- `RuntimeException` не требует обязательного `throws` и `try/catch`.
+- `orElseThrow(...)` либо возвращает значение из `Optional`, либо выбрасывает exception.
 
 ### JPA и PostgreSQL
 
@@ -238,6 +259,9 @@
 - `LinkedHashMap` сохраняет порядок добавления field errors.
 - `putIfAbsent()` добавляет ошибку поля только если для этого поля ещё нет сообщения.
 - `HttpServletRequest#getRequestURI()` позволяет получить путь запроса для ответа об ошибке.
+- `ResourceNotFoundException` используется, когда ресурс не найден.
+- Для `404` тело ответа есть, но `fieldErrors` пустой, потому что нет ошибок конкретных полей.
+- `GlobalExceptionHandler` нужен, чтобы не дублировать одинаковую логику ошибок в каждом Controller.
 
 ### Тестирование
 
@@ -257,6 +281,7 @@
 - Невалидный request должен возвращать `400 Bad Request` и не доходить до Service.
 - `content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)` проверяет, что ответ является JSON.
 - `jsonPath("$.fieldErrors.name")` проверяет значение поля внутри JSON-ответа.
+- `jsonPath("$.fieldErrors").isEmpty()` проверяет пустой объект ошибок полей.
 
 ## Что я пока понимаю частично
 
@@ -268,8 +293,8 @@
 - Устройство `pom.xml` и управление зависимостями Maven.
 - Работу с ветками Git и `merge`.
 - Использование `ArgumentCaptor`.
-- Как правильно убрать `Optional`-проверки из Controller после введения собственных exception.
-- Как сделать единый формат `404 Not Found`.
+- Нужно ли `DELETE /api/companies/{id}` возвращать `404`, если компания отсутствует.
+- Когда лучше переносить `ResourceNotFoundException` из Controller в Service.
 
 ## Известные ошибки
 
@@ -285,42 +310,41 @@ BUILD SUCCESS
 ## Технический долг
 
 - Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- Единый формат ошибок пока реализован только для validation-ошибок.
-- `404 Not Found` пока возвращается без JSON body через `ResponseEntity.notFound().build()`.
-- Обработка отсутствующей компании пока выполняется непосредственно в Controller через `Optional`.
-- `DELETE` пока всегда возвращает `204 No Content`.
+- Единый формат ошибок пока реализован для validation-ошибок и not found ошибок в `GET`/`PUT` Company.
+- `DELETE /api/companies/{id}` пока всегда возвращает `204 No Content`, даже если `id` отсутствует.
+- Обработка отсутствующей компании пока частично выполняется в Controller через `orElseThrow(...)`.
 - Схема базы данных пока управляется Hibernate; Flyway будет добавлен позже.
 - Предупреждение `spring.jpa.open-in-view` пока не устранено.
 - Предупреждение об отсутствии JTA не является блокирующей ошибкой.
-- `PROJECT_STATUS.md` в репозитории нужно обновить отдельным status-коммитом, если эта версия будет перенесена в локальный проект.
 
-## Последний рабочий коммит
+## Последний рабочий code-коммит
 
-- Hash: `11ab7d1`
-- Message: `Verify update validation error response`
-- В `CompanyControllerTest` добавлена проверка полного JSON `ErrorResponse` для validation-ошибки при `PUT /api/companies/{id}`.
+- Hash: `773760d`
+- Message: `Handle update not found errors`
+- В `CompanyController` метод `PUT /api/companies/{id}` переведён с `ResponseEntity.notFound().build()` на `ResourceNotFoundException`.
+- В `CompanyControllerTest` добавлена проверка JSON `ErrorResponse` для `PUT /api/companies/{id}`, если компания не найдена.
 - Все 23 теста прошли успешно.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево чистое.
+- Рабочее дерево чистое перед обновлением `PROJECT_STATUS.md`.
 
 ## Последние коммиты
 
+- `c2ee641 Update project status after validation error handling`
+- `a6a7972 Handle not found errors`
+- `773760d Handle update not found errors`
 - `c2cc04f Add error response DTO`
 - `1cfe9dc Handle validation errors`
 - `11ab7d1 Verify update validation error response`
-- `b6b37b4 Add Company request length validation`
-- `87e18c8 Add Company request name validation`
-- `2931f1a Add Bean Validation dependency`
 
 ## Следующее задание
 
-1. Создать `ResourceNotFoundException` в пакете `exception`.
-2. Добавить обработку `ResourceNotFoundException` в `GlobalExceptionHandler`.
-3. Перевести `GET /api/companies/{id}` на выбрасывание exception вместо `ResponseEntity.notFound().build()`.
-4. Обновить controller-тест для отсутствующей компании: ожидать JSON `ErrorResponse`.
-5. Затем аналогично обработать `PUT /api/companies/{id}` для отсутствующей компании.
-6. Позже уточнить поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
+1. Обновить локальный `PROJECT_STATUS.md` этим файлом и сделать отдельный status-коммит.
+2. Уточнить поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
+3. Если решаем возвращать `404`, изменить `CompanyService.deleteCompany(...)` или Controller так, чтобы отсутствующий `id` обрабатывался через `ResourceNotFoundException`.
+4. Добавить или обновить controller/service-тесты для поведения `DELETE`.
+5. После завершения ошибок обновить `PROJECT_STATUS.md`.
+6. Перейти к сущности `Vacancy` и связи `Many-to-One` с `Company`.
 
 ## Критерии завершения текущего подэтапа
 
@@ -344,12 +368,16 @@ BUILD SUCCESS
 - [x] Добавлены controller-тесты на невалидные запросы.
 - [x] Создан `ErrorResponse`.
 - [x] Создан `GlobalExceptionHandler`.
+- [x] Создан `ResourceNotFoundException`.
 - [x] Validation-ошибки возвращаются в едином JSON-формате.
 - [x] JSON validation-ошибок покрыт controller-тестами для `POST` и `PUT`.
+- [x] Not found ошибки для `GET /api/companies/{id}` возвращаются в едином JSON-формате.
+- [x] Not found ошибки для `PUT /api/companies/{id}` возвращаются в едином JSON-формате.
+- [x] JSON not found ошибок покрыт controller-тестами для `GET` и `PUT`.
 - [x] Все 23 теста завершаются с `BUILD SUCCESS`.
 - [x] Code-коммиты отправлены на GitHub.
-- [x] `PROJECT_STATUS.md` обновлён в источниках проекта.
-- [x] Актуальная версия `PROJECT_STATUS.md` подготовлена для локального репозитория.
+- [ ] Уточнено поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
+- [ ] `PROJECT_STATUS.md` обновлён и отправлен на GitHub после завершения блока `GET`/`PUT` not found.
 
 ## Вопросы для повторения
 
@@ -377,7 +405,12 @@ BUILD SUCCESS
 22. Зачем нужен `ErrorResponse`?
 23. Зачем нужен `@RestControllerAdvice`?
 24. Что делает `@ExceptionHandler`?
-25. Почему сейчас `404 Not Found` ещё не имеет единого JSON-формата?
+25. Почему `ResourceNotFoundException` наследуется от `RuntimeException`?
+26. Что делает `orElseThrow(...)`?
+27. Почему после `orElseThrow(...)` можно работать с обычным `Company`, а не с `Optional<Company>`?
+28. Почему для `404` используется пустой `fieldErrors`?
+29. Почему обработку ошибок лучше держать в `GlobalExceptionHandler`?
+30. Какой ответ должен возвращать `DELETE /api/companies/{id}`, если компания не найдена?
 
 ## Журнал прогресса
 
@@ -510,13 +543,50 @@ BUILD SUCCESS
 - `1cfe9dc Handle validation errors`
 - `11ab7d1 Verify update validation error response`
 
+### 2026-07-16
+
+#### Выполнено
+
+- Обновлён `PROJECT_STATUS.md` после validation error handling.
+- Создан `ResourceNotFoundException`.
+- В `GlobalExceptionHandler` добавлен handler для `ResourceNotFoundException`.
+- `GET /api/companies/{id}` переведён на `orElseThrow(...)` и `ResourceNotFoundException`.
+- Тест `shouldReturnNotFoundWhenCompanyDoesNotExist` обновлён: теперь проверяет JSON `ErrorResponse`.
+- Коммит `Handle not found errors` отправлен на GitHub.
+- `PUT /api/companies/{id}` переведён на `orElseThrow(...)` и `ResourceNotFoundException`.
+- Тест `shouldReturnNotFoundWhenUpdatingMissingCompany` обновлён: теперь проверяет JSON `ErrorResponse`.
+- Коммит `Handle update not found errors` отправлен на GitHub.
+- Запускался точечный тест для `GET` not found.
+- Запускался точечный тест для `PUT` not found.
+- Запускался полный `CompanyControllerTest`.
+- Запускался полный набор тестов проекта.
+- Все 23 теста завершились с `BUILD SUCCESS`.
+
+#### Изучено
+
+- Что `RuntimeException` не требует обязательного `throws` и `try/catch`.
+- Как `ResourceNotFoundException` превращается в HTTP-ответ через `@ExceptionHandler`.
+- Что `Optional.empty()` — это отсутствие значения, а exception — способ прервать обычный поток выполнения.
+- Что `orElseThrow(...)` либо возвращает значение из `Optional`, либо выбрасывает exception.
+- Почему после `orElseThrow(...)` можно работать с обычным `Company`.
+- Почему у `404` есть тело ответа `ErrorResponse`, но `fieldErrors` пустой.
+- Почему централизованная обработка ошибок лучше дублирования JSON в каждом Controller.
+
+#### Коммиты
+
+- `c2ee641 Update project status after validation error handling`
+- `a6a7972 Handle not found errors`
+- `773760d Handle update not found errors`
+
 #### Следующее действие
 
-- Создать `ResourceNotFoundException` и начать обработку `404 Not Found` через единый `ErrorResponse`.
+- Обновить `PROJECT_STATUS.md` в репозитории отдельным status-коммитом.
+- Уточнить поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
+- После этого перейти к `Vacancy` и связи `Many-to-One` с `Company`.
 
 ## Точка остановки
 
-### 2026-07-15
+### 2026-07-16
 
 - Для `Company` реализован полный CRUD.
 - Все пять CRUD endpoint проверены вручную.
@@ -527,23 +597,24 @@ BUILD SUCCESS
 - `CompanyMapper` внедрён в `CompanyController`.
 - Все основные endpoint `CompanyController` переведены на DTO там, где DTO нужен.
 - `GET /api/companies` возвращает `List<CompanyResponse>`.
-- `GET /api/companies/{id}` возвращает `CompanyResponse`.
+- `GET /api/companies/{id}` возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`.
 - `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`.
-- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse`.
+- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`.
 - `DELETE /api/companies/{id}` возвращает `204 No Content`, DTO не нужен.
 - В `CompanyRequest` добавлены validation-правила для `name`, `website` и `description`.
 - В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
 - Validation покрыта controller-тестами.
 - Создан `ErrorResponse`.
 - Создан `GlobalExceptionHandler`.
+- Создан `ResourceNotFoundException`.
 - Validation-ошибки возвращаются в едином JSON-формате.
-- `404 Not Found` пока ещё не переведён на единый JSON-формат.
+- `404 Not Found` для `GET` и `PUT` возвращается в едином JSON-формате.
 - В `CompanyMapperTest` находится 2 unit-теста.
 - Всего в проекте 23 теста.
 - Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `11ab7d1 Verify update validation error response`.
+- Последний рабочий code-коммит: `773760d Handle update not found errors`.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево чистое.
-- Следующий шаг: создать `ResourceNotFoundException`.
+- Рабочее дерево было чистым перед обновлением `PROJECT_STATUS.md`.
+- Следующий шаг: обновить `PROJECT_STATUS.md` отдельным коммитом, затем обсудить `DELETE /api/companies/{id}` для отсутствующего `id`.
 - Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
