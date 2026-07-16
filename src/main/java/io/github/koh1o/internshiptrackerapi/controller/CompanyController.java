@@ -82,13 +82,12 @@ public class CompanyController {
             @Valid @RequestBody CompanyRequest request
     ) {
         Company company = companyMapper.toEntity(request);
-        Optional<Company> updatedCompanyOptional = companyService.updateCompany(id, company);
+        Company updatedCompany = companyService.updateCompany(id, company)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Company not found with id: " + id
+                ));
 
-        if (updatedCompanyOptional.isPresent()) {
-            CompanyResponse response = companyMapper.toResponse(updatedCompanyOptional.get());
-            return ResponseEntity.ok(response);
-        }
-
-        return ResponseEntity.notFound().build();
+        CompanyResponse response = companyMapper.toResponse(updatedCompany);
+        return ResponseEntity.ok(response);
     }
 }
