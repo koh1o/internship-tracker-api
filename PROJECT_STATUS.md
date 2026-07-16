@@ -2,7 +2,7 @@
 
 ## Текущий этап
 
-Этап 2 — `Company` API переведён с Entity на DTO, добавлена базовая Bean Validation для `CompanyRequest`.
+Этап 2 — `Company` API переведён с Entity на DTO, добавлена Bean Validation и начат единый формат ошибок.
 
 Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены все пять endpoint:
 
@@ -11,18 +11,6 @@
 - `GET /api/companies/{id}`;
 - `PUT /api/companies/{id}`;
 - `DELETE /api/companies/{id}`.
-
-Созданы и подключены:
-
-- `CompanyRequest` — входной DTO;
-- `CompanyResponse` — выходной DTO;
-- ручной `CompanyMapper`;
-- unit-тесты преобразований `CompanyRequest → Company` и `Company → CompanyResponse`;
-- Bean Validation dependency;
-- validation-аннотации для `CompanyRequest`;
-- controller-тесты на невалидные запросы.
-
-`CompanyMapper` зарегистрирован как Spring-компонент через `@Component` и внедрён в `CompanyController`.
 
 Текущий внешний контракт `CompanyController`:
 
@@ -39,9 +27,25 @@
 - `website` максимум 255 символов, поле необязательное;
 - `description` максимум 1000 символов, поле необязательное.
 
+Для validation-ошибок уже добавлен единый JSON-ответ через `GlobalExceptionHandler` и `ErrorResponse`.
+
+Пример текущего ответа при validation-ошибке:
+
+```json
+{
+  "status": 400,
+  "error": "Validation failed",
+  "message": "Invalid request data",
+  "path": "/api/companies",
+  "fieldErrors": {
+    "name": "Company name must be at most 100 characters"
+  }
+}
+```
+
 Всего в проекте 23 теста. Последний полный запуск завершился с `BUILD SUCCESS`.
 
-Следующий шаг — добавить единый формат ошибок через `@RestControllerAdvice`.
+Следующий шаг — перейти к единому формату `404 Not Found`: создать `ResourceNotFoundException`, обработать его в `GlobalExceptionHandler`, затем постепенно убрать `Optional`-проверки из Controller.
 
 ## Уже выполнено
 
@@ -58,6 +62,7 @@
 - [x] Проверен `.gitignore`.
 - [x] В Git не добавлены секреты, `.idea/` и `target/`.
 - [x] Последние рабочие code-коммиты отправлены на GitHub.
+- [x] На момент остановки рабочее дерево чистое, ветка `main` синхронизирована с `origin/main`.
 
 ### Spring Boot
 
@@ -133,10 +138,12 @@
 - [x] Проверен `400 Bad Request` при создании компании со слишком длинным `name`.
 - [x] Проверен `400 Bad Request` при обновлении компании со слишком длинным `description`.
 - [x] Проверено, что Service не вызывается при невалидных данных.
+- [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `POST`.
+- [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `PUT`.
 - [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
-- [x] Все controller-тесты проходят после перехода Controller на DTO и Bean Validation.
+- [x] Все controller-тесты проходят после перехода Controller на DTO, Bean Validation и обработки validation-ошибок.
 
-### DTO, mapper и validation
+### DTO, mapper, validation и errors
 
 - [x] Создан пакет `dto.company`.
 - [x] Создан `CompanyRequest` как `record`.
@@ -156,6 +163,14 @@
 - [x] В `CompanyRequest` добавлен `@Size(max = 255)` для `website`.
 - [x] В `CompanyRequest` добавлен `@Size(max = 1000)` для `description`.
 - [x] В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
+- [x] Создан пакет `dto.error`.
+- [x] Создан `ErrorResponse` как `record`.
+- [x] `ErrorResponse` содержит `status`, `error`, `message`, `path`, `fieldErrors`.
+- [x] Создан пакет `exception`.
+- [x] Создан `GlobalExceptionHandler`.
+- [x] `GlobalExceptionHandler` помечен `@RestControllerAdvice`.
+- [x] Обработан `MethodArgumentNotValidException`.
+- [x] Validation-ошибки возвращаются как JSON `ErrorResponse`.
 - [x] Все 23 теста проекта завершились с `BUILD SUCCESS`.
 
 ## Что я уже понимаю
@@ -184,6 +199,8 @@
 - Bean — объект, который создаёт и хранит Spring.
 - `@Component` позволяет зарегистрировать обычный класс как Spring bean.
 - `@Import` в test context позволяет явно добавить нужный класс в `@WebMvcTest`.
+- `@RestControllerAdvice` позволяет централизованно обрабатывать ошибки из controller-слоя.
+- `@ExceptionHandler` связывает конкретный тип исключения с методом обработки.
 
 ### JPA и PostgreSQL
 
@@ -197,7 +214,7 @@
 - `findById()` возвращает `Optional`, потому что запись может отсутствовать.
 - Пароль базы данных передаётся через `DB_PASSWORD`, а не хранится в Git.
 
-### DTO, mapper и validation
+### DTO, mapper, validation и errors
 
 - DTO используется для передачи данных между клиентом и API.
 - Entity описывает модель базы данных и не должна без необходимости становиться внешним контрактом API.
@@ -215,6 +232,12 @@
 - `@Valid` включает проверку validation-аннотаций для `@RequestBody`.
 - `@NotBlank` запрещает `null`, пустую строку и строку только из пробелов.
 - `@Size(max = N)` ограничивает длину строки, но не запрещает `null`.
+- `ErrorResponse` задаёт единый формат JSON-ответа для ошибок.
+- `MethodArgumentNotValidException` возникает при ошибке Bean Validation для `@Valid @RequestBody`.
+- `FieldError` хранит информацию об ошибке конкретного поля.
+- `LinkedHashMap` сохраняет порядок добавления field errors.
+- `putIfAbsent()` добавляет ошибку поля только если для этого поля ещё нет сообщения.
+- `HttpServletRequest#getRequestURI()` позволяет получить путь запроса для ответа об ошибке.
 
 ### Тестирование
 
@@ -232,6 +255,8 @@
 - Обычный mapper без зависимостей можно тестировать без Spring.
 - Для теста `toResponse()` использован mock `Company`, потому что у Entity нет setters для серверных полей.
 - Невалидный request должен возвращать `400 Bad Request` и не доходить до Service.
+- `content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)` проверяет, что ответ является JSON.
+- `jsonPath("$.fieldErrors.name")` проверяет значение поля внутри JSON-ответа.
 
 ## Что я пока понимаю частично
 
@@ -242,8 +267,9 @@
 - Принципы REST API и выбор HTTP-статусов для ошибок.
 - Устройство `pom.xml` и управление зависимостями Maven.
 - Работу с ветками Git и `merge`.
-- Единую обработку ошибок через `@RestControllerAdvice`.
 - Использование `ArgumentCaptor`.
+- Как правильно убрать `Optional`-проверки из Controller после введения собственных exception.
+- Как сделать единый формат `404 Not Found`.
 
 ## Известные ошибки
 
@@ -259,42 +285,42 @@ BUILD SUCCESS
 ## Технический долг
 
 - Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- Ошибки пока не имеют единого JSON-формата.
+- Единый формат ошибок пока реализован только для validation-ошибок.
+- `404 Not Found` пока возвращается без JSON body через `ResponseEntity.notFound().build()`.
 - Обработка отсутствующей компании пока выполняется непосредственно в Controller через `Optional`.
 - `DELETE` пока всегда возвращает `204 No Content`.
 - Схема базы данных пока управляется Hibernate; Flyway будет добавлен позже.
 - Предупреждение `spring.jpa.open-in-view` пока не устранено.
 - Предупреждение об отсутствии JTA не является блокирующей ошибкой.
+- `PROJECT_STATUS.md` в репозитории нужно обновить отдельным status-коммитом, если эта версия будет перенесена в локальный проект.
 
 ## Последний рабочий коммит
 
-- Hash: `b6b37b4`
-- Message: `Add Company request length validation`
-- В `CompanyRequest` добавлены ограничения длины для `website` и `description`.
-- Добавлены controller-тесты для слишком длинного `name` и слишком длинного `description`.
+- Hash: `11ab7d1`
+- Message: `Verify update validation error response`
+- В `CompanyControllerTest` добавлена проверка полного JSON `ErrorResponse` для validation-ошибки при `PUT /api/companies/{id}`.
 - Все 23 теста прошли успешно.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
+- Рабочее дерево чистое.
 
 ## Последние коммиты
 
-- `2931f1a Add Bean Validation dependency`
-- `87e18c8 Add Company request name validation`
+- `c2cc04f Add error response DTO`
+- `1cfe9dc Handle validation errors`
+- `11ab7d1 Verify update validation error response`
 - `b6b37b4 Add Company request length validation`
-- `011a0c3 Update project status after Company DTO migration`
-- `fb51605 Use Company DTOs in update endpoint`
-- `e644e66 Use Company DTOs in creation endpoint`
+- `87e18c8 Add Company request name validation`
+- `2931f1a Add Bean Validation dependency`
 
 ## Следующее задание
 
-1. Обновить `PROJECT_STATUS.md` отдельным коммитом.
-2. Изучить, какой JSON Spring возвращает по умолчанию при validation-ошибке.
-3. Создать единый DTO для ошибок.
-4. Добавить `@RestControllerAdvice`.
-5. Обработать validation-ошибки в едином формате.
-6. Обработать not found ошибки в едином формате.
-7. Постепенно убрать `Optional`-проверки из Controller после введения собственных exception.
+1. Создать `ResourceNotFoundException` в пакете `exception`.
+2. Добавить обработку `ResourceNotFoundException` в `GlobalExceptionHandler`.
+3. Перевести `GET /api/companies/{id}` на выбрасывание exception вместо `ResponseEntity.notFound().build()`.
+4. Обновить controller-тест для отсутствующей компании: ожидать JSON `ErrorResponse`.
+5. Затем аналогично обработать `PUT /api/companies/{id}` для отсутствующей компании.
+6. Позже уточнить поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
 
 ## Критерии завершения текущего подэтапа
 
@@ -316,9 +342,14 @@ BUILD SUCCESS
 - [x] В `CompanyRequest` добавлены правила для `name`, `website` и `description`.
 - [x] В Controller добавлен `@Valid` для `POST` и `PUT`.
 - [x] Добавлены controller-тесты на невалидные запросы.
+- [x] Создан `ErrorResponse`.
+- [x] Создан `GlobalExceptionHandler`.
+- [x] Validation-ошибки возвращаются в едином JSON-формате.
+- [x] JSON validation-ошибок покрыт controller-тестами для `POST` и `PUT`.
 - [x] Все 23 теста завершаются с `BUILD SUCCESS`.
 - [x] Code-коммиты отправлены на GitHub.
-- [ ] `PROJECT_STATUS.md` обновлён, закоммичен и отправлен на GitHub.
+- [x] `PROJECT_STATUS.md` обновлён в источниках проекта.
+- [x] Актуальная версия `PROJECT_STATUS.md` подготовлена для локального репозитория.
 
 ## Вопросы для повторения
 
@@ -343,6 +374,10 @@ BUILD SUCCESS
 19. Чем `@NotBlank` отличается от `@Size`?
 20. Почему `@Size(max = 255)` не запрещает `null`?
 21. Почему при validation-ошибке Service не должен вызываться?
+22. Зачем нужен `ErrorResponse`?
+23. Зачем нужен `@RestControllerAdvice`?
+24. Что делает `@ExceptionHandler`?
+25. Почему сейчас `404 Not Found` ещё не имеет единого JSON-формата?
 
 ## Журнал прогресса
 
@@ -432,6 +467,13 @@ BUILD SUCCESS
 - В `CompanyRequest` добавлены validation-аннотации для `name`, `website` и `description`.
 - В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
 - Добавлены controller-тесты для validation-ошибок.
+- Временной диагностикой через `andDo(print())` проверено, что стандартный Spring response для validation error имел `Status = 400`, `Content type = null`, пустой `Body`.
+- Создан `ErrorResponse`.
+- Создан `GlobalExceptionHandler`.
+- `GlobalExceptionHandler` обрабатывает `MethodArgumentNotValidException`.
+- Validation-ошибки теперь возвращаются в JSON-формате `ErrorResponse`.
+- В `CompanyControllerTest` проверяется JSON validation-ошибки для `POST`.
+- В `CompanyControllerTest` проверяется JSON validation-ошибки для `PUT`.
 - Запускались точечные controller-тесты после каждого изменения.
 - Запускался полный `CompanyControllerTest`.
 - Запускался полный набор тестов проекта.
@@ -448,6 +490,9 @@ BUILD SUCCESS
 - Как использовать `stream().map(...).toList()` для преобразования списка Entity в список DTO.
 - Как работает базовая Bean Validation для `@RequestBody`.
 - Почему при невалидном request Service не должен вызываться.
+- Как стандартный Spring response для validation-ошибки отличается от собственного `ErrorResponse`.
+- Как `@RestControllerAdvice` и `@ExceptionHandler` помогают централизовать обработку ошибок.
+- Как через `jsonPath` проверить вложенные поля JSON-ответа.
 
 #### Коммиты
 
@@ -460,11 +505,14 @@ BUILD SUCCESS
 - `2931f1a Add Bean Validation dependency`
 - `87e18c8 Add Company request name validation`
 - `b6b37b4 Add Company request length validation`
+- `d544f4c Update project status after Company validation`
+- `c2cc04f Add error response DTO`
+- `1cfe9dc Handle validation errors`
+- `11ab7d1 Verify update validation error response`
 
 #### Следующее действие
 
-- Обновить `PROJECT_STATUS.md` отдельным коммитом.
-- Затем перейти к единому формату ошибок через `@RestControllerAdvice`.
+- Создать `ResourceNotFoundException` и начать обработку `404 Not Found` через единый `ErrorResponse`.
 
 ## Точка остановки
 
@@ -486,12 +534,16 @@ BUILD SUCCESS
 - В `CompanyRequest` добавлены validation-правила для `name`, `website` и `description`.
 - В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
 - Validation покрыта controller-тестами.
+- Создан `ErrorResponse`.
+- Создан `GlobalExceptionHandler`.
+- Validation-ошибки возвращаются в едином JSON-формате.
+- `404 Not Found` пока ещё не переведён на единый JSON-формат.
 - В `CompanyMapperTest` находится 2 unit-теста.
 - Всего в проекте 23 теста.
 - Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `b6b37b4 Add Company request length validation`.
+- Последний рабочий code-коммит: `11ab7d1 Verify update validation error response`.
 - Коммит отправлен на GitHub.
 - Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево было чистым до обновления `PROJECT_STATUS.md`.
-- Следующий шаг: закоммитить обновлённый `PROJECT_STATUS.md`, затем перейти к единому формату ошибок.
+- Рабочее дерево чистое.
+- Следующий шаг: создать `ResourceNotFoundException`.
 - Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
