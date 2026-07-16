@@ -68,8 +68,16 @@ class CompanyControllerTest {
 
         when(companyService.getCompanyById(companyId))
                 .thenReturn(Optional.empty());
+
         mockMvc.perform(get("/api/companies/{id}", companyId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Company not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/companies/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
         verify(companyService).getCompanyById(companyId);
     }
 

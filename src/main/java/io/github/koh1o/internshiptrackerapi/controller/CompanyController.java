@@ -3,6 +3,7 @@ package io.github.koh1o.internshiptrackerapi.controller;
 import io.github.koh1o.internshiptrackerapi.dto.company.CompanyRequest;
 import io.github.koh1o.internshiptrackerapi.dto.company.CompanyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
 import io.github.koh1o.internshiptrackerapi.service.CompanyService;
 import jakarta.validation.Valid;
@@ -58,13 +59,13 @@ public class CompanyController {
     public ResponseEntity<CompanyResponse> getCompanyById(
             @PathVariable Long id
     ) {
-        Optional<Company> companyOptional = companyService.getCompanyById(id);
-        if (companyOptional.isPresent()) {
-            CompanyResponse response = companyMapper.toResponse(companyOptional.get());
-            return ResponseEntity.ok(response);
-        }
+        Company company = companyService.getCompanyById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Company not found with id: " + id
+                ));
 
-        return ResponseEntity.notFound().build();
+        CompanyResponse response = companyMapper.toResponse(company);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
