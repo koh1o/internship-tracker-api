@@ -9,6 +9,8 @@ import io.github.koh1o.internshiptrackerapi.repository.CompanyRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class VacancyService {
 
@@ -38,5 +40,16 @@ public class VacancyService {
         Vacancy savedVacancy = vacancyRepository.save(vacancy);
 
         return savedVacancy;
+    }
+
+    public List<Vacancy> getAllVacancies() {
+        return vacancyRepository.findAll();
+    }
+
+    public Vacancy getVacancyById(Long id) {
+        return vacancyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Vacancy not found with id: " + id
+                ));
     }
 }

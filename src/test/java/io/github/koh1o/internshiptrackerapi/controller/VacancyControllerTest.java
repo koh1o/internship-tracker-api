@@ -15,11 +15,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -182,5 +184,64 @@ class VacancyControllerTest {
 
         verify(vacancyService).createVacancy(request);
         verifyNoInteractions(vacancyMapper);
+    }
+
+    @Test
+    void shouldReturnAllVacancies() throws Exception {
+        Vacancy firstVacancy = mock(Vacancy.class);
+        Vacancy secondVacancy = mock(Vacancy.class);
+
+        List<Vacancy> vacancies = List.of(
+                firstVacancy,
+                secondVacancy
+        );
+
+        VacancyResponse firstResponse = new VacancyResponse(
+                10L,
+                1L,
+                "Example Company",
+                "Java Backend Intern",
+                "https://example.com/java-intern",
+                "Helsinki",
+                WorkFormat.HYBRID,
+                "Java backend internship",
+                LocalDateTime.of(2026, 7, 17, 15, 30),
+                LocalDateTime.of(2026, 7, 17, 15, 30)
+        );
+
+        VacancyResponse secondResponse = new VacancyResponse(
+                20L,
+                2L,
+                "Remote Tech",
+                "Junior Backend Developer",
+                "https://remotetech.example/backend-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Remote backend position",
+                LocalDateTime.of(2026, 7, 18, 10, 0),
+                LocalDateTime.of(2026, 7, 18, 11, 30)
+        );
+
+        when(vacancyService.getAllVacancies())
+                .thenReturn(vacancies);
+        when(vacancyMapper.toResponse(firstVacancy))
+                .thenReturn(firstResponse);
+        when(vacancyMapper.toResponse(secondVacancy))
+                .thenReturn(secondResponse);
+
+        mockMvc.perform(get("/api/vacancies"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(10L))
+                .andExpect(jsonPath("$[1].id").value(20L))
+                .andExpect(jsonPath("$[0].companyName").value("Example Company"))
+                .andExpect(jsonPath("$[0].workFormat").value("HYBRID"))
+                .andExpect(jsonPath("$[1].companyName").value("Remote Tech"))
+                .andExpect(jsonPath("$[1].workFormat").value("REMOTE"));
+
+        verify(vacancyService).getAllVacancies();
+        verify(vacancyMapper).toResponse(firstVacancy);
+        verify(vacancyMapper).toResponse(secondVacancy);
     }
 }

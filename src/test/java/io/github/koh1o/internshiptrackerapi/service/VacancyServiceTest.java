@@ -11,6 +11,7 @@ import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -113,5 +114,54 @@ class VacancyServiceTest {
 
         verify(vacancyMapper, never()).toEntity(eq(request), any(Company.class));
         verify(vacancyRepository, never()).save(any(Vacancy.class));
+    }
+
+    @Test
+    void shouldReturnAllVacancies() {
+        List<Vacancy> vacancies = List.of(
+                mock(Vacancy.class),
+                mock(Vacancy.class)
+        );
+
+        when(vacancyRepository.findAll())
+                .thenReturn(vacancies);
+
+        List<Vacancy> result = vacancyService.getAllVacancies();
+        assertSame(vacancies, result);
+
+        verify(vacancyRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnVacancyById() {
+        Long vacancyId = 10L;
+        Vacancy vacancy = mock(Vacancy.class);
+
+        when(vacancyRepository.findById(vacancyId)).thenReturn(Optional.of(vacancy));
+
+        Vacancy result = vacancyService.getVacancyById(vacancyId);
+        assertSame(vacancy, result);
+
+        verify(vacancyRepository).findById(vacancyId);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenVacancyDoesNotExist() {
+        Long vacancyId = 999L;
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> vacancyService.getVacancyById(vacancyId)
+        );
+
+        assertEquals(
+                "Vacancy not found with id: 999",
+                exception.getMessage()
+        );
+
+        verify(vacancyRepository).findById(vacancyId);
     }
 }
