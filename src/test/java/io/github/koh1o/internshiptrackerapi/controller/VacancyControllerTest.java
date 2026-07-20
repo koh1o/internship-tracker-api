@@ -244,4 +244,65 @@ class VacancyControllerTest {
         verify(vacancyMapper).toResponse(firstVacancy);
         verify(vacancyMapper).toResponse(secondVacancy);
     }
+
+    @Test
+    void shouldReturnVacancyById() throws Exception {
+        Long vacancyId = 10L;
+        Vacancy vacancy = mock(Vacancy.class);
+
+        VacancyResponse response = new VacancyResponse(
+                10L,
+                1L,
+                "Example Company",
+                "Java Backend Intern",
+                "https://example.com/java-intern",
+                "Helsinki",
+                WorkFormat.HYBRID,
+                "Java backend internship",
+                LocalDateTime.of(2026, 7, 17, 15, 30),
+                LocalDateTime.of(2026, 7, 17, 15, 30)
+        );
+
+        when(vacancyService.getVacancyById(vacancyId))
+                .thenReturn(vacancy);
+        when(vacancyMapper.toResponse(vacancy))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/vacancies/{id}", vacancyId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.companyId").value(1L))
+                .andExpect(jsonPath("$.companyName").value("Example Company"))
+                .andExpect(jsonPath("$.title").value("Java Backend Intern"))
+                .andExpect(jsonPath("$.workFormat").value("HYBRID"));
+
+        verify(vacancyService).getVacancyById(vacancyId);
+        verify(vacancyMapper).toResponse(vacancy);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenVacancyDoesNotExist() throws Exception {
+        Long vacancyId = 999L;
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Vacancy not found with id: " + vacancyId
+                );
+
+        when(vacancyService.getVacancyById(vacancyId))
+                .thenThrow(exception);
+
+        mockMvc.perform(get("/api/vacancies/{id}", vacancyId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Vacancy not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/vacancies/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(vacancyService).getVacancyById(vacancyId);
+        verifyNoInteractions(vacancyMapper);
+    }
 }

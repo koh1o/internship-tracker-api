@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,5 +50,15 @@ public class VacancyController {
                 .toList();
 
         return responses;
+    }
+
+    @GetMapping("/{id}")
+    public VacancyResponse getVacancyById(
+            @PathVariable Long id
+    ) {
+        Vacancy vacancy = vacancyService.getVacancyById(id);
+        VacancyResponse response = vacancyMapper.toResponse(vacancy);
+
+        return response;
     }
 }
