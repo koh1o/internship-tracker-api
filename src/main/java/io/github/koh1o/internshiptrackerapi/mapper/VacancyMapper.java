@@ -34,4 +34,17 @@ public class VacancyMapper {
                 vacancy.getUpdatedAt()
         );
     }
+
+    public void updateEntity(
+            Vacancy vacancy,
+            VacancyRequest request,
+            Company company
+    ) {
+        vacancy.setCompany(company);
+        vacancy.setTitle(request.title());
+        vacancy.setLink(request.link());
+        vacancy.setCity(request.city());
+        vacancy.setWorkFormat(request.workFormat());
+        vacancy.setDescription(request.description());
+    }
 }

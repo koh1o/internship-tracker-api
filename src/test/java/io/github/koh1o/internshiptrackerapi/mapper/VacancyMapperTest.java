@@ -85,4 +85,46 @@ class VacancyMapperTest {
         assertEquals(createdAt, response.createdAt());
         assertEquals(updatedAt, response.updatedAt());
     }
+
+    @Test
+    void shouldUpdateEntity() {
+        Company oldCompany = new Company(
+                "Old Company",
+                "https://old-company.example",
+                "Old company description"
+        );
+
+        Company newCompany = new Company(
+                "New Company",
+                "https://new-company.example",
+                "New company description"
+        );
+
+        Vacancy vacancy = new Vacancy(
+                oldCompany,
+                "Java Backend Intern",
+                "https://example.com/java-intern",
+                "Helsinki",
+                WorkFormat.HYBRID,
+                "Original internship description"
+        );
+
+        VacancyRequest request = new VacancyRequest(
+                2L,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        vacancyMapper.updateEntity(vacancy, request, newCompany);
+
+        assertSame(newCompany, vacancy.getCompany());
+        assertEquals("Updated Backend Internship", vacancy.getTitle());
+        assertEquals("https://example.com/updated-vacancy", vacancy.getLink());
+        assertEquals("Tampere", vacancy.getCity());
+        assertEquals(WorkFormat.REMOTE, vacancy.getWorkFormat());
+        assertEquals("Updated description", vacancy.getDescription());
+    }
 }

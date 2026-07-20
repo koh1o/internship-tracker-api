@@ -22,10 +22,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 
 @WebMvcTest(VacancyController.class)
@@ -304,5 +305,190 @@ class VacancyControllerTest {
 
         verify(vacancyService).getVacancyById(vacancyId);
         verifyNoInteractions(vacancyMapper);
+    }
+
+    @Test
+    void shouldUpdateVacancy() throws Exception {
+        Long vacancyId = 10L;
+
+        VacancyRequest request = new VacancyRequest(
+                2L,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        Vacancy updatedVacancy = mock(Vacancy.class);
+
+        VacancyResponse response = new VacancyResponse(
+                10L,
+                2L,
+                "New Company",
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description",
+                LocalDateTime.of(2026, 7, 17, 15, 30),
+                LocalDateTime.of(2026, 7, 21, 12, 0)
+        );
+
+        String requestJson = """
+                {
+                  "companyId": 2,
+                  "title": "Updated Backend Internship",
+                  "link": "https://example.com/updated-vacancy",
+                  "city": "Tampere",
+                  "workFormat": "REMOTE",
+                  "description": "Updated description"
+                }
+                """;
+
+        when(vacancyService.updateVacancy(vacancyId, request))
+                .thenReturn(updatedVacancy);
+        when(vacancyMapper.toResponse(updatedVacancy))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/vacancies/{id}", vacancyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.companyId").value(2L))
+                .andExpect(jsonPath("$.companyName").value("New Company"))
+                .andExpect(jsonPath("$.title").value("Updated Backend Internship"))
+                .andExpect(jsonPath("$.city").value("Tampere"))
+                .andExpect(jsonPath("$.workFormat").value("REMOTE"))
+                .andExpect(jsonPath("$.description").value("Updated description"));
+
+        verify(vacancyService).updateVacancy(vacancyId, request);
+        verify(vacancyMapper).toResponse(updatedVacancy);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingMissingVacancy() throws Exception {
+        Long vacancyId = 999L;
+
+        VacancyRequest request = new VacancyRequest(
+                2L,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Vacancy not found with id: " + vacancyId
+                );
+
+        String requestJson = """
+                {
+                  "companyId": 2,
+                  "title": "Updated Backend Internship",
+                  "link": "https://example.com/updated-vacancy",
+                  "city": "Tampere",
+                  "workFormat": "REMOTE",
+                  "description": "Updated description"
+                }
+                """;
+
+        when(vacancyService.updateVacancy(vacancyId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(put("/api/vacancies/{id}", vacancyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Vacancy not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/vacancies/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(vacancyService).updateVacancy(vacancyId, request);
+        verifyNoInteractions(vacancyMapper);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingWithMissingCompany() throws Exception {
+        Long vacancyId = 10L;
+        Long companyId = 999L;
+
+        VacancyRequest request = new VacancyRequest(
+                companyId,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Company not found with id: " + companyId
+                );
+
+        String requestJson = """
+                {
+                  "companyId": 999,
+                  "title": "Updated Backend Internship",
+                  "link": "https://example.com/updated-vacancy",
+                  "city": "Tampere",
+                  "workFormat": "REMOTE",
+                  "description": "Updated description"
+                }
+                """;
+
+        when(vacancyService.updateVacancy(vacancyId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(put("/api/vacancies/{id}", vacancyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Company not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/vacancies/10"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(vacancyService).updateVacancy(vacancyId, request);
+        verifyNoInteractions(vacancyMapper);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatingWithBlankTitle() throws Exception {
+        Long vacancyId = 10L;
+
+        String requestJson = """
+                {
+                  "companyId": 2,
+                  "title": "   ",
+                  "link": "https://example.com/updated-vacancy",
+                  "city": "Tampere",
+                  "workFormat": "REMOTE",
+                  "description": "Updated description"
+                }
+                """;
+
+        mockMvc.perform(put("/api/vacancies/{id}", vacancyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validation failed"))
+                .andExpect(jsonPath("$.message").value("Invalid request data"))
+                .andExpect(jsonPath("$.path").value("/api/vacancies/10"))
+                .andExpect(jsonPath("$.fieldErrors.title").exists());
+
+        verifyNoInteractions(vacancyService, vacancyMapper);
     }
 }

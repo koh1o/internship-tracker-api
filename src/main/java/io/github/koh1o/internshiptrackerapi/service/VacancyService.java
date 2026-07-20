@@ -52,4 +52,24 @@ public class VacancyService {
                         "Vacancy not found with id: " + id
                 ));
     }
+
+    public Vacancy updateVacancy(
+            Long id,
+            VacancyRequest request
+    ) {
+        Vacancy vacancy = vacancyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Vacancy not found with id: " + id
+                ));
+        Company company = companyRepository.findById(request.companyId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Company not found with id: " + request.companyId()
+                ));
+
+        vacancyMapper.updateEntity(vacancy, request, company);
+
+        Vacancy savedVacancy = vacancyRepository.save(vacancy);
+
+        return savedVacancy;
+    }
 }

@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class VacancyServiceTest {
@@ -163,5 +164,107 @@ class VacancyServiceTest {
         );
 
         verify(vacancyRepository).findById(vacancyId);
+    }
+
+    @Test
+    void shouldUpdateVacancy() {
+        Long vacancyId = 10L;
+        Long companyId = 2L;
+
+        VacancyRequest request = new VacancyRequest(
+                companyId,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        Vacancy existingVacancy = mock(Vacancy.class);
+        Company company = mock(Company.class);
+        Vacancy savedVacancy = mock(Vacancy.class);
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.of(existingVacancy));
+
+        when(companyRepository.findById(companyId))
+                .thenReturn(Optional.of(company));
+
+        when(vacancyRepository.save(existingVacancy))
+                .thenReturn(savedVacancy);
+
+        Vacancy result = vacancyService.updateVacancy(vacancyId, request);
+
+        assertSame(savedVacancy, result);
+
+        verify(vacancyRepository).findById(vacancyId);
+        verify(companyRepository).findById(companyId);
+        verify(vacancyMapper).updateEntity(existingVacancy, request, company);
+        verify(vacancyRepository).save(existingVacancy);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingMissingVacancy() {
+        Long vacancyId = 999L;
+
+        VacancyRequest request = new VacancyRequest(
+                2L,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> vacancyService.updateVacancy(vacancyId, request));
+
+        assertEquals(
+                "Vacancy not found with id: 999",
+                exception.getMessage()
+        );
+
+        verify(vacancyRepository).findById(vacancyId);
+        verifyNoInteractions(companyRepository, vacancyMapper);
+        verify(vacancyRepository, never()).save(any(Vacancy.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingWithMissingCompany() {
+        Long vacancyId = 10L;
+        Long companyId = 999L;
+
+        VacancyRequest request = new VacancyRequest(
+                companyId,
+                "Updated Backend Internship",
+                "https://example.com/updated-vacancy",
+                "Tampere",
+                WorkFormat.REMOTE,
+                "Updated description"
+        );
+
+        Vacancy existingVacancy = mock(Vacancy.class);
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.of(existingVacancy));
+        when(companyRepository.findById(companyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> vacancyService.updateVacancy(vacancyId, request));
+
+        assertEquals("Company not found with id: 999",
+                exception.getMessage()
+        );
+
+        verify(vacancyRepository).findById(vacancyId);
+        verify(companyRepository).findById(companyId);
+        verifyNoInteractions(vacancyMapper);
+        verify(vacancyRepository, never()).save(any(Vacancy.class));
     }
 }

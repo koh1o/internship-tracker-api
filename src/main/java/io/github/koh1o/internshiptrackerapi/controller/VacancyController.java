@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,6 +59,17 @@ public class VacancyController {
     ) {
         Vacancy vacancy = vacancyService.getVacancyById(id);
         VacancyResponse response = vacancyMapper.toResponse(vacancy);
+
+        return response;
+    }
+
+    @PutMapping("/{id}")
+    public VacancyResponse updateVacancy(
+            @PathVariable Long id,
+            @Valid @RequestBody VacancyRequest request
+    ) {
+        Vacancy updatedVacancy = vacancyService.updateVacancy(id, request);
+        VacancyResponse response = vacancyMapper.toResponse(updatedVacancy);
 
         return response;
     }
