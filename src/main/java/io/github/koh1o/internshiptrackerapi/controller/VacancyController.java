@@ -8,6 +8,7 @@ import io.github.koh1o.internshiptrackerapi.service.VacancyService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -72,5 +73,14 @@ public class VacancyController {
         VacancyResponse response = vacancyMapper.toResponse(updatedVacancy);
 
         return response;
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVacancy(
+            @PathVariable Long id
+    ) {
+        vacancyService.deleteVacancy(id);
+
+        return ResponseEntity.noContent().build();
     }
 }

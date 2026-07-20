@@ -72,4 +72,13 @@ public class VacancyService {
 
         return savedVacancy;
     }
+
+    public void deleteVacancy(Long id) {
+        Vacancy vacancy = vacancyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Vacancy not found with id: " + id
+                ));
+
+        vacancyRepository.delete(vacancy);
+    }
 }

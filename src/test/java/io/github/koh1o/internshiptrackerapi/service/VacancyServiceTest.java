@@ -267,4 +267,36 @@ class VacancyServiceTest {
         verifyNoInteractions(vacancyMapper);
         verify(vacancyRepository, never()).save(any(Vacancy.class));
     }
+
+    @Test
+    void shouldDeleteVacancy() {
+        Long vacancyId = 10L;
+        Vacancy vacancy = mock(Vacancy.class);
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.of(vacancy));
+
+        vacancyService.deleteVacancy(vacancyId);
+
+        verify(vacancyRepository).findById(vacancyId);
+        verify(vacancyRepository).delete(vacancy);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingMissingVacancy() {
+        Long vacancyId = 999L;
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> vacancyService.deleteVacancy(vacancyId)
+        );
+
+        assertEquals("Vacancy not found with id: 999", exception.getMessage());
+
+        verify(vacancyRepository).findById(vacancyId);
+        verify(vacancyRepository, never()).delete(any(Vacancy.class));
+    }
 }

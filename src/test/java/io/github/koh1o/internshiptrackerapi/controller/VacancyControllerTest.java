@@ -17,17 +17,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 
 @WebMvcTest(VacancyController.class)
 class VacancyControllerTest {
@@ -490,5 +491,41 @@ class VacancyControllerTest {
                 .andExpect(jsonPath("$.fieldErrors.title").exists());
 
         verifyNoInteractions(vacancyService, vacancyMapper);
+    }
+
+    @Test
+    void shouldDeleteVacancy() throws Exception {
+        Long vacancyId = 10L;
+
+        mockMvc.perform(delete("/api/vacancies/{id}", vacancyId))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(vacancyService).deleteVacancy(vacancyId);
+        verifyNoInteractions(vacancyMapper);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingMissingVacancy() throws Exception {
+        Long vacancyId = 999L;
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Vacancy not found with id: " + vacancyId
+                );
+
+        doThrow(exception).when(vacancyService).deleteVacancy(vacancyId);
+
+        mockMvc.perform(delete("/api/vacancies/{id}", vacancyId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Vacancy not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/vacancies/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(vacancyService).deleteVacancy(vacancyId);
+        verifyNoInteractions(vacancyMapper);
     }
 }
