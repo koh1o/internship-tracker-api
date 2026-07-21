@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.mapper;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
 
 class ApplicationMapperTest {
 
@@ -116,5 +118,41 @@ class ApplicationMapperTest {
         assertEquals("Waiting for response", response.notes());
         assertEquals(createdAt, response.createdAt());
         assertEquals(updatedAt, response.updatedAt());
+    }
+
+    @Test
+    void shouldUpdateApplicationEntity() {
+        Vacancy oldVacancy = mock(Vacancy.class);
+        Vacancy newVacancy = mock(Vacancy.class);
+
+        Application application = new Application(
+                oldVacancy,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                null,
+                "Old notes"
+        );
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        20L,
+                        LocalDateTime.of(2026, 7, 2, 11, 0),
+                        LocalDateTime.of(2026, 7, 10, 12, 0),
+                        "Updated notes"
+                );
+
+        applicationMapper.updateEntity(application, request, newVacancy);
+
+        assertSame(newVacancy, application.getVacancy());
+        assertEquals(
+                LocalDateTime.of(2026, 7, 2, 11, 0),
+                application.getAppliedAt()
+        );
+        assertEquals(
+                LocalDateTime.of(2026, 7, 10, 12, 0),
+                application.getNextContactAt()
+        );
+        assertEquals("Updated notes", application.getNotes());
+        assertEquals(ApplicationStatus.APPLIED, application.getStatus());
     }
 }

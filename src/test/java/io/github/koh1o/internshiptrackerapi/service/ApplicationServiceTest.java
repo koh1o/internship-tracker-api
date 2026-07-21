@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
@@ -17,7 +18,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -150,5 +153,103 @@ class ApplicationServiceTest {
         assertEquals("Application not found with id: 999", exception.getMessage());
 
         verify(applicationRepository).findById(applicationId);
+    }
+
+    @Test
+    void shouldUpdateApplication() {
+        Long applicationId = 30L;
+        Long vacancyId = 20L;
+
+        Application application = mock(Application.class);
+        Vacancy vacancy = mock(Vacancy.class);
+        Application savedApplication = mock(Application.class);
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        vacancyId,
+                        LocalDateTime.of(2026, 7, 2, 11, 0),
+                        LocalDateTime.of(2026, 7, 10, 12, 0),
+                        "Updated notes"
+                );
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.of(vacancy));
+        when(applicationRepository.save(application))
+                .thenReturn(savedApplication);
+
+        Application result = applicationService.updateApplication(applicationId, request);
+
+        assertSame(savedApplication, result);
+
+        verify(applicationRepository).findById(applicationId);
+        verify(vacancyRepository).findById(vacancyId);
+        verify(applicationMapper).updateEntity(application, request, vacancy);
+        verify(applicationRepository).save(application);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingMissingApplication() {
+        Long applicationId = 999L;
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        20L,
+                        null,
+                        null,
+                        "Updated notes"
+                );
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.updateApplication(applicationId, request)
+        );
+
+        assertEquals("Application not found with id: 999", exception.getMessage());
+
+        verify(applicationRepository).findById(applicationId);
+        verifyNoInteractions(applicationMapper, vacancyRepository);
+        verify(applicationRepository, never())
+                .save(any(Application.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingWithMissingVacancy() {
+        Long applicationId = 30L;
+        Long vacancyId = 888L;
+
+        Application application = mock(Application.class);
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        vacancyId,
+                        null,
+                        null,
+                        "Updated notes"
+                );
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.updateApplication(applicationId, request)
+        );
+
+        assertEquals(
+                "Vacancy not found with id: 888",
+                exception.getMessage()
+        );
+
+        verify(applicationRepository).findById(applicationId);
+        verify(vacancyRepository).findById(vacancyId);
+        verifyNoInteractions(applicationMapper);
+        verify(applicationRepository, never()).save(any(Application.class));
     }
 }

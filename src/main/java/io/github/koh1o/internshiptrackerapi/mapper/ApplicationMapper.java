@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.mapper;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
@@ -40,5 +41,16 @@ public class ApplicationMapper {
                 application.getCreatedAt(),
                 application.getUpdatedAt()
         );
+    }
+
+    public void updateEntity(
+            Application application,
+            ApplicationUpdateRequest request,
+            Vacancy vacancy
+    ) {
+        application.setVacancy(vacancy);
+        application.setAppliedAt(request.appliedAt());
+        application.setNextContactAt(request.nextContactAt());
+        application.setNotes(request.notes());
     }
 }

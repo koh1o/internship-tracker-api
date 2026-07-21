@@ -3,6 +3,7 @@ package io.github.koh1o.internshiptrackerapi.controller;
 import tools.jackson.databind.ObjectMapper;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -287,6 +289,93 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.fieldErrors").isEmpty());
 
         verify(applicationService).getApplicationById(applicationId);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldUpdateApplication() throws Exception {
+        Long applicationId = 30L;
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        20L,
+                        LocalDateTime.of(2026, 7, 2, 11, 0),
+                        LocalDateTime.of(2026, 7, 10, 12, 0),
+                        "Updated notes"
+                );
+
+        Application updatedApplication = mock(Application.class);
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 2, 11, 0),
+                LocalDateTime.of(2026, 7, 10, 12, 0),
+                "Updated notes",
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                LocalDateTime.of(2026, 7, 2, 11, 5)
+        );
+
+        when(applicationService.updateApplication(applicationId, request))
+                .thenReturn(updatedApplication);
+        when(applicationMapper.toResponse(updatedApplication))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/applications/{id}", applicationId)
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(30L))
+                .andExpect(jsonPath("$.vacancyId").value(20L))
+                .andExpect(jsonPath("$.status").value("APPLIED"))
+                .andExpect(jsonPath("$.appliedAt").value("2026-07-02T11:00:00"))
+                .andExpect(jsonPath("$.nextContactAt").value("2026-07-10T12:00:00"))
+                .andExpect(jsonPath("$.notes").value("Updated notes"));
+
+        verify(applicationService).updateApplication(applicationId, request);
+        verify(applicationMapper).toResponse(updatedApplication);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingMissingApplication()
+            throws Exception {
+
+        Long applicationId = 999L;
+
+        ApplicationUpdateRequest request =
+                new ApplicationUpdateRequest(
+                        20L,
+                        null,
+                        null,
+                        "Updated notes"
+                );
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Application not found with id: " + applicationId
+                );
+
+        when(applicationService.updateApplication(applicationId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(put("/api/applications/{id}", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message")
+                        .value("Application not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/applications/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).updateApplication(applicationId, request);
         verifyNoInteractions(applicationMapper);
     }
 }
