@@ -1,0 +1,101 @@
+package io.github.koh1o.internshiptrackerapi.service;
+
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.entity.Application;
+import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
+import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
+import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
+import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+class ApplicationServiceTest {
+
+    private final ApplicationRepository applicationRepository =
+            mock(ApplicationRepository.class);
+
+    private final VacancyRepository vacancyRepository =
+            mock(VacancyRepository.class);
+
+    private final ApplicationMapper applicationMapper =
+            mock(ApplicationMapper.class);
+
+    private final ApplicationService applicationService =
+            new ApplicationService(
+                    applicationRepository,
+                    vacancyRepository,
+                    applicationMapper
+            );
+
+    @Test
+    void shouldCreateApplication() {
+        Long vacancyId = 20L;
+
+        ApplicationRequest request = new ApplicationRequest(
+                vacancyId,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response"
+        );
+
+        Vacancy vacancy = mock(Vacancy.class);
+        Application application = mock(Application.class);
+        Application savedApplication = mock(Application.class);
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.of(vacancy));
+
+        when(applicationMapper.toEntity(request, vacancy))
+                .thenReturn(application);
+
+        when(applicationRepository.save(application))
+                .thenReturn(savedApplication);
+
+        Application result = applicationService.createApplication(request);
+
+        assertSame(savedApplication, result);
+
+        verify(vacancyRepository).findById(vacancyId);
+        verify(applicationMapper).toEntity(request, vacancy);
+        verify(applicationRepository).save(application);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCreatingApplicationForMissingVacancy() {
+        Long vacancyId = 999L;
+
+        ApplicationRequest request = new ApplicationRequest(
+                vacancyId,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response"
+        );
+
+        when(vacancyRepository.findById(vacancyId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.createApplication(request)
+        );
+
+        assertEquals("Vacancy not found with id: 999", exception.getMessage());
+
+        verify(vacancyRepository).findById(vacancyId);
+        verifyNoInteractions(applicationMapper, applicationRepository);
+    }
+}
