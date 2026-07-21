@@ -1,673 +1,486 @@
 # Internship Tracker API — текущее состояние
 
+## Актуальность файла
+
+Последнее обновление: **2026-07-21**.
+
+Это актуальная стабильная точка проекта после реализации обновления данных `Application` через `PUT /api/applications/{id}`.
+
+В источниках проекта должен находиться только один файл с названием `PROJECT_STATUS.md`.
+
+---
+
 ## Текущий этап
 
-Этап 3 — начата реализация `Vacancy`: создана модель данных вакансии, enum `WorkFormat`, `VacancyRepository` и repository-тесты.
+Выполняется этап реализации `Application`.
 
-Базовый `Company CRUD` завершён на уровнях Repository, Service и Controller. Реализованы и вручную проверены пять endpoint:
+Для `Application` уже готовы:
 
-- `GET /api/companies`;
-- `POST /api/companies`;
-- `GET /api/companies/{id}`;
-- `PUT /api/companies/{id}`;
-- `DELETE /api/companies/{id}`.
+- JPA Entity и enum статусов;
+- Repository и repository-тест;
+- DTO для создания, ответа и обновления;
+- ручной Mapper;
+- Service;
+- Controller;
+- создание;
+- получение списка;
+- получение по `id`;
+- обновление основных данных;
+- единая обработка ошибок;
+- unit- и controller-тесты.
 
-Текущий внешний контракт `CompanyController`:
-
-- `GET /api/companies` возвращает `List<CompanyResponse>`;
-- `GET /api/companies/{id}` возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`;
-- `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`;
-- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`;
-- `DELETE /api/companies/{id}` возвращает `204 No Content`, если компания существует, или JSON `ErrorResponse` с `404 Not Found`, если компания не найдена.
-
-Текущие validation-правила для `CompanyRequest`:
-
-- `name` обязателен: `@NotBlank`;
-- `name` максимум 100 символов;
-- `website` максимум 255 символов, поле необязательное;
-- `description` максимум 1000 символов, поле необязательное.
-
-Для validation-ошибок и not found ошибок используется единый JSON-ответ через `GlobalExceptionHandler` и `ErrorResponse`.
-
-Пример validation-ошибки:
-
-```json
-{
-  "status": 400,
-  "error": "Validation failed",
-  "message": "Invalid request data",
-  "path": "/api/companies",
-  "fieldErrors": {
-    "name": "Company name must be at most 100 characters"
-  }
-}
-```
-
-Пример not found ошибки:
-
-```json
-{
-  "status": 404,
-  "error": "Not found",
-  "message": "Company not found with id: 999",
-  "path": "/api/companies/999",
-  "fieldErrors": {}
-}
-```
-
-Всего в проекте 27 тестов. Последний полный запуск завершился с `BUILD SUCCESS`.
-
-Следующий шаг — обновить `PROJECT_STATUS.md` отдельным status-коммитом. После этого это хорошая точка для перехода в чат 03: там продолжить с `Vacancy DTO`, mapper, service и controller.
-
-## Уже выполнено
-
-### Среда и Git
-
-- [x] Установлен и настроен JDK 21.
-- [x] Настроен `JAVA_HOME`.
-- [x] Проверен Maven Wrapper 3.9.16.
-- [x] Установлен и настроен Git.
-- [x] Проверен PostgreSQL 18.4.
-- [x] Создан публичный GitHub-репозиторий `internship-tracker-api`.
-- [x] Инициализирован локальный Git-репозиторий.
-- [x] Локальная ветка `main` связана с `origin/main`.
-- [x] Проверен `.gitignore`.
-- [x] В Git не добавлены секреты, `.idea/` и `target/`.
-- [x] Последние рабочие code-коммиты отправлены на GitHub.
-- [x] На момент остановки рабочее дерево было чистым, ветка `main` синхронизирована с `origin/main`.
-
-### Spring Boot
-
-- [x] Создан Spring Boot 4.1.0 проект на Java 21 и Maven.
-- [x] Добавлена зависимость Spring Web.
-- [x] Создан `HelloController`.
-- [x] Реализован `GET /api/hello`.
-- [x] Endpoint возвращает `Hello, Internship Tracker!`.
-- [x] Приложение успешно запускается на порту 8080.
-
-### База данных и Entity
-
-- [x] Добавлены Spring Data JPA и PostgreSQL JDBC Driver.
-- [x] Создана база данных `internship_tracker`.
-- [x] Создана роль PostgreSQL `internship_tracker_app`.
-- [x] Настроено получение пароля через переменную окружения `DB_PASSWORD`.
-- [x] Создана JPA-сущность `Company`.
-- [x] Добавлены поля `id`, `name`, `website`, `description`, `createdAt`, `updatedAt`.
-- [x] Настроены JPA-аннотации и ограничения столбцов.
-- [x] Добавлено заполнение `createdAt` и `updatedAt` через `@PrePersist` и `@PreUpdate`.
-- [x] Hibernate создаёт таблицу `companies`.
-- [x] Создан enum `WorkFormat`: `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
-- [x] Создана JPA-сущность `Vacancy`.
-- [x] Добавлены поля `id`, `company`, `title`, `link`, `city`, `workFormat`, `description`, `createdAt`, `updatedAt`.
-- [x] Настроена связь `Many-to-One` от `Vacancy` к `Company` через `company_id`.
-- [x] Для `workFormat` используется `@Enumerated(EnumType.STRING)`.
-- [x] Если `workFormat` равен `null`, он заменяется на `WorkFormat.NOT_SPECIFIED`.
-- [x] Для `Vacancy` добавлено заполнение `createdAt` и `updatedAt` через `@PrePersist` и `@PreUpdate`.
-
-### Repository
-
-- [x] Создан `CompanyRepository`.
-- [x] `CompanyRepository` наследуется от `JpaRepository<Company, Long>`.
-- [x] Создан `CompanyRepositoryTest`.
-- [x] Проверены сохранение и чтение `Company` через PostgreSQL.
-- [x] В Repository-тестах используется `@DataJpaTest`.
-- [x] PostgreSQL не заменяется встроенной базой благодаря `@AutoConfigureTestDatabase(replace = NONE)`.
-- [x] Создан `VacancyRepository`.
-- [x] `VacancyRepository` наследуется от `JpaRepository<Vacancy, Long>`.
-- [x] Создан `VacancyRepositoryTest`.
-- [x] Проверено внедрение `VacancyRepository`.
-- [x] Проверено сохранение и чтение `Vacancy` вместе с обязательной связью на `Company`.
-
-### Service
-
-- [x] Создан `CompanyService`.
-- [x] `CompanyRepository` внедряется через конструктор.
-- [x] Реализованы `createCompany()`, `getAllCompanies()`, `getCompanyById()`, `updateCompany()`, `deleteCompany()`.
-- [x] Создан `CompanyServiceTest`.
-- [x] Repository заменяется mock-объектом через Mockito.
-- [x] Проверены создание, список, поиск, обновление и удаление.
-- [x] Проверены найденная и отсутствующая компания через `Optional`.
-- [x] Проверено, что при обновлении отсутствующей компании `save()` не вызывается.
-
-### Controller и HTTP
-
-- [x] Создан `CompanyController`.
-- [x] Реализован полный CRUD.
-- [x] `POST /api/companies` возвращает `201 Created`.
-- [x] `DELETE /api/companies/{id}` возвращает `204 No Content`.
-- [x] Вручную проверены ответы `200 OK`, `201 Created`, `204 No Content` и `404 Not Found`.
-- [x] Проверено, что при обновлении сохраняются `id` и `createdAt`, а `updatedAt` изменяется.
-- [x] `CompanyMapper` внедрён в `CompanyController`.
-- [x] `GET /api/companies` переведён на возврат `List<CompanyResponse>`.
-- [x] `GET /api/companies/{id}` переведён на возврат `CompanyResponse`.
-- [x] `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
-- [x] `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
-- [x] `POST /api/companies` и `PUT /api/companies/{id}` используют `@Valid`.
-- [x] `GET /api/companies/{id}` выбрасывает `ResourceNotFoundException`, если компания не найдена.
-- [x] `PUT /api/companies/{id}` выбрасывает `ResourceNotFoundException`, если компания не найдена.
-- [x] `DELETE /api/companies/{id}` выбрасывает `ResourceNotFoundException`, если компания не найдена.
-
-### Controller-тесты
-
-- [x] Создан `CompanyControllerTest`.
-- [x] Controller тестируется через `@WebMvcTest(CompanyController.class)`.
-- [x] `CompanyService` заменяется mock-объектом через `@MockitoBean`.
-- [x] `CompanyMapper` подключён в controller-тест через `@Import(CompanyMapper.class)`.
-- [x] Проверен список компаний.
-- [x] Проверен успешный поиск по `id`.
-- [x] Проверен `404 Not Found` для отсутствующей компании.
-- [x] Проверено создание через `POST`.
-- [x] Проверено удаление через `DELETE`.
-- [x] Проверено успешное обновление через `PUT`.
-- [x] Проверен `404 Not Found` при обновлении отсутствующей компании.
-- [x] Проверен `400 Bad Request` при создании компании с пустым `name`.
-- [x] Проверен `400 Bad Request` при обновлении компании с пустым `name`.
-- [x] Проверен `400 Bad Request` при создании компании со слишком длинным `name`.
-- [x] Проверен `400 Bad Request` при обновлении компании со слишком длинным `description`.
-- [x] Проверено, что Service не вызывается при невалидных данных.
-- [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `POST`.
-- [x] Проверен JSON-ответ `ErrorResponse` для validation-ошибки при `PUT`.
-- [x] Проверен JSON-ответ `ErrorResponse` для `GET /api/companies/{id}`, если компания не найдена.
-- [x] Проверен JSON-ответ `ErrorResponse` для `PUT /api/companies/{id}`, если компания не найдена.
-- [x] Проверен JSON-ответ `ErrorResponse` для `DELETE /api/companies/{id}`, если компания не найдена.
-- [x] Проверяются HTTP-статусы, JSON-ответы и вызовы Service.
-- [x] Все controller-тесты проходят после перехода Controller на DTO, Bean Validation и обработку ошибок.
-
-### DTO, mapper, validation и errors
-
-- [x] Создан пакет `dto.company`.
-- [x] Создан `CompanyRequest` как `record`.
-- [x] `CompanyRequest` содержит `name`, `website`, `description`.
-- [x] Создан `CompanyResponse` как `record`.
-- [x] `CompanyResponse` содержит `id`, основные поля, `createdAt`, `updatedAt`.
-- [x] Создан ручной `CompanyMapper`.
-- [x] Реализован `toEntity(CompanyRequest request)`.
-- [x] Реализован `toResponse(Company company)`.
-- [x] `CompanyMapper` зарегистрирован как Spring-компонент через `@Component`.
-- [x] Создан `CompanyMapperTest`.
-- [x] Проверено преобразование `CompanyRequest → Company`.
-- [x] Проверено преобразование `Company → CompanyResponse`.
-- [x] Mapper unit-тестируется без запуска Spring-контекста.
-- [x] Добавлена зависимость `spring-boot-starter-validation`.
-- [x] В `CompanyRequest` добавлены `@NotBlank` и `@Size` для `name`.
-- [x] В `CompanyRequest` добавлен `@Size(max = 255)` для `website`.
-- [x] В `CompanyRequest` добавлен `@Size(max = 1000)` для `description`.
-- [x] В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
-- [x] Создан пакет `dto.error`.
-- [x] Создан `ErrorResponse` как `record`.
-- [x] `ErrorResponse` содержит `status`, `error`, `message`, `path`, `fieldErrors`.
-- [x] Создан пакет `exception`.
-- [x] Создан `GlobalExceptionHandler`.
-- [x] `GlobalExceptionHandler` помечен `@RestControllerAdvice`.
-- [x] Обработан `MethodArgumentNotValidException`.
-- [x] Создан `ResourceNotFoundException`.
-- [x] Обработан `ResourceNotFoundException`.
-- [x] Validation-ошибки возвращаются как JSON `ErrorResponse`.
-- [x] Not found ошибки для `GET`, `PUT` и `DELETE` возвращаются как JSON `ErrorResponse`.
-- [x] Все 27 тестов проекта завершились с `BUILD SUCCESS`.
-
-## Что я уже понимаю
-
-### Git
-
-- `git status` показывает состояние рабочего дерева и staging area.
-- `git add` помещает изменения в staging area.
-- `git commit` сохраняет подготовленные изменения локально.
-- `git push` отправляет коммиты на GitHub.
-- `git diff` показывает незастейдженные изменения.
-- `git diff --cached` показывает содержимое будущего коммита.
-- `working tree clean` означает, что нет незакоммиченных изменений в файлах.
-- `Your branch is up to date with 'origin/main'` означает, что локальная ветка синхронизирована с GitHub.
-- `.gitignore` исключает служебные и генерируемые файлы.
-
-### Архитектура и Spring
-
-- Поток приложения: `HTTP request → Controller → Service → Repository → PostgreSQL`.
-- Controller принимает HTTP-запрос и вызывает Service.
-- Service содержит бизнес-логику и вызывает Repository.
-- Controller не должен обращаться к Repository напрямую.
-- Constructor injection передаёт зависимости через конструктор.
-- `ResponseEntity` позволяет управлять HTTP-статусом и телом ответа.
-- Spring создаёт управляемые объекты для классов с подходящими аннотациями.
-- Bean — объект, который создаёт и хранит Spring.
-- `@Component` позволяет зарегистрировать обычный класс как Spring bean.
-- `@Import` в test context позволяет явно добавить нужный класс в `@WebMvcTest`.
-- `@RestControllerAdvice` позволяет централизованно обрабатывать ошибки из controller-слоя.
-- `@ExceptionHandler` связывает конкретный тип исключения с методом обработки.
-- `RuntimeException` не требует обязательного `throws` и `try/catch`.
-- `orElseThrow(...)` либо возвращает значение из `Optional`, либо выбрасывает exception.
-
-### JPA и PostgreSQL
-
-- `@Entity` связывает класс с таблицей базы данных.
-- `@ManyToOne` описывает связь many-to-one: много `Vacancy` могут ссылаться на одну `Company`.
-- `FetchType.LAZY` означает, что связанная `Company` загружается не сразу, а при обращении к ней.
-- `@JoinColumn(name = "company_id")` задаёт внешний ключ в таблице `vacancies`.
-- `@Enumerated(EnumType.STRING)` сохраняет enum в базе как строку, а не как число.
-- Repository-тесты с `@DataJpaTest` проверяют реальные JPA-маппинги и работу с БД.
-- `@Id` обозначает первичный ключ.
-- `@GeneratedValue` настраивает генерацию идентификатора.
-- `@Column` задаёт свойства столбца.
-- `@PrePersist` вызывается перед первым сохранением.
-- `@PreUpdate` вызывается перед обновлением.
-- `JpaRepository<Company, Long>` работает с `Company` и `Long`.
-- `findById()` возвращает `Optional`, потому что запись может отсутствовать.
-- Пароль базы данных передаётся через `DB_PASSWORD`, а не хранится в Git.
-
-### DTO, mapper, validation и errors
-
-- DTO используется для передачи данных между клиентом и API.
-- Entity описывает модель базы данных и не должна без необходимости становиться внешним контрактом API.
-- `CompanyRequest` содержит только поля, которые клиент может отправить.
-- `CompanyResponse` содержит в том числе серверные поля.
-- `record` автоматически создаёт конструктор, методы доступа, `equals()`, `hashCode()` и `toString()`.
-- У record методы доступа называются `name()`, `website()` и так далее.
-- Mapper преобразует DTO в Entity и Entity в DTO.
-- Ручной mapper явно показывает, какие поля копируются.
-- `CompanyMapper.toEntity()` создаёт Entity из входного DTO.
-- `CompanyMapper.toResponse()` создаёт выходной DTO из Entity.
-- В Controller Entity остаётся внутри приложения, а клиент получает DTO.
-- Service пока продолжает работать с Entity, а DTO используются на границе API.
-- Bean Validation проверяет входные данные до вызова Service.
-- `@Valid` включает проверку validation-аннотаций для `@RequestBody`.
-- `@NotBlank` запрещает `null`, пустую строку и строку только из пробелов.
-- `@Size(max = N)` ограничивает длину строки, но не запрещает `null`.
-- `ErrorResponse` задаёт единый формат JSON-ответа для ошибок.
-- `MethodArgumentNotValidException` возникает при ошибке Bean Validation для `@Valid @RequestBody`.
-- `FieldError` хранит информацию об ошибке конкретного поля.
-- `LinkedHashMap` сохраняет порядок добавления field errors.
-- `putIfAbsent()` добавляет ошибку поля только если для этого поля ещё нет сообщения.
-- `HttpServletRequest#getRequestURI()` позволяет получить путь запроса для ответа об ошибке.
-- `ResourceNotFoundException` используется, когда ресурс не найден.
-- Для `404` тело ответа есть, но `fieldErrors` пустой, потому что нет ошибок конкретных полей.
-- `GlobalExceptionHandler` нужен, чтобы не дублировать одинаковую логику ошибок в каждом Controller.
-
-### Тестирование
-
-- Unit-тест проверяет отдельный класс без всей инфраструктуры.
-- Mock заменяет настоящую зависимость.
-- `when(...).thenReturn(...)` задаёт поведение mock.
-- `verify(...)` проверяет вызов метода mock-объекта.
-- `never()` проверяет, что метод не был вызван.
-- `@DataJpaTest` запускает JPA-часть Spring-контекста.
-- `@WebMvcTest` запускает MVC-часть приложения.
-- `MockMvc` выполняет HTTP-подобные запросы без настоящего сервера.
-- `@MockitoBean` помещает mock в Spring test context.
-- `any(...)` и `eq(...)` — Mockito matchers.
-- Если в одном вызове используется matcher, остальные аргументы тоже задаются через matchers.
-- Обычный mapper без зависимостей можно тестировать без Spring.
-- Для теста `toResponse()` использован mock `Company`, потому что у Entity нет setters для серверных полей.
-- Невалидный request должен возвращать `400 Bad Request` и не доходить до Service.
-- `content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)` проверяет, что ответ является JSON.
-- `jsonPath("$.fieldErrors.name")` проверяет значение поля внутри JSON-ответа.
-- `jsonPath("$.fieldErrors").isEmpty()` проверяет пустой объект ошибок полей.
-
-## Что я пока понимаю частично
-
-- Как Spring сканирует пакеты и создаёт компоненты.
-- Полный механизм dependency injection внутри Spring.
-- Чем `@Import(CompanyMapper.class)` в тесте отличается от обычного component scanning.
-- Полную структуру HTTP-запроса и HTTP-ответа.
-- Принципы REST API и выбор HTTP-статусов для ошибок.
-- Устройство `pom.xml` и управление зависимостями Maven.
-- Работу с ветками Git и `merge`.
-- Использование `ArgumentCaptor`.
-- Нужно ли `DELETE /api/companies/{id}` возвращать `404`, если компания отсутствует.
-- Когда лучше переносить `ResourceNotFoundException` из Controller в Service.
-
-## Известные ошибки
-
-Критических ошибок нет.
-
-Последний полный запуск тестов:
+Следующий шаг — отдельная бизнес-операция изменения статуса:
 
 ```text
-Tests run: 27, Failures: 0, Errors: 0
+PATCH /api/applications/{id}/status
+```
+
+После неё останется реализовать удаление `Application`, а затем добавить бизнес-правила дат и переходов статусов.
+
+---
+
+## Текущая стабильная точка
+
+Последний рабочий code-коммит:
+
+```text
+a3eb4dd Add Application update endpoint
+```
+
+Состояние Git после отправки коммита:
+
+```text
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+        modified:   PROJECT_STATUS.md
+```
+
+Все Java-изменения закоммичены и отправлены на GitHub. Локально изменён только `PROJECT_STATUS.md`.
+
+Всего в проекте **72 теста**.
+
+Последний полный запуск:
+
+```text
+Tests run: 72
+Failures: 0
+Errors: 0
 BUILD SUCCESS
 ```
 
-## Технический долг
+---
 
-- Для `GET /api/hello` пока нет отдельного теста через `MockMvc`.
-- Единый формат ошибок реализован для validation-ошибок и not found ошибок в `GET`/`PUT`/`DELETE` Company.
-- `DELETE /api/companies/{id}` теперь возвращает `404 Not Found` с JSON `ErrorResponse`, если компания отсутствует.
-- Обработка отсутствующей компании выполняется через `ResourceNotFoundException`: для `GET` и `PUT` exception выбрасывается в Controller, для `DELETE` — в Service.
-- Схема базы данных пока управляется Hibernate; Flyway будет добавлен позже.
-- Предупреждение `spring.jpa.open-in-view` пока не устранено.
-- Предупреждение об отсутствии JTA не является блокирующей ошибкой.
+## Реализованный функционал
 
-## Последний рабочий code-коммит
+### Среда и Git
 
-- Hash: `c5929d3`
-- Message: `Add Vacancy entity`
-- Добавлен enum `WorkFormat`.
-- Добавлена JPA-сущность `Vacancy` со связью `Many-to-One` к `Company`.
-- Добавлен `VacancyRepository`.
-- Добавлен `VacancyRepositoryTest` для проверки сохранения и чтения вакансии через PostgreSQL.
-- Все 27 тестов прошли успешно.
-- Коммит отправлен на GitHub.
-- Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево чистое перед обновлением `PROJECT_STATUS.md`.
+- [x] JDK 21 установлен и используется проектом.
+- [x] Настроен `JAVA_HOME`.
+- [x] Используется Maven Wrapper 3.9.16.
+- [x] Установлен и настроен Git.
+- [x] Создан публичный GitHub-репозиторий `internship-tracker-api`.
+- [x] Ветка `main` связана с `origin/main`.
+- [x] Настроен `.gitignore`.
+- [x] В Git не попадают `.idea/`, `target/`, реальные пароли и другие секреты.
+- [x] Перед коммитами проверяются тесты, `git status`, diff и staging.
+- [x] Для diff используется `git --no-pager diff`.
+- [x] Для staged diff используется `git --no-pager diff --cached`.
+- [x] Code-коммиты остаются небольшими и осмысленными.
+- [x] Изменения `PROJECT_STATUS.md` не смешиваются с code-коммитами.
 
-## Последние коммиты
+### Spring Boot и PostgreSQL
 
-- `c2ee641 Update project status after validation error handling`
-- `a6a7972 Handle not found errors`
-- `773760d Handle update not found errors`
-- `72fa767 Update project status after not found handling`
-- `8867709 Handle delete not found errors`
-- `75348b4 Update project status after delete error handling`
-- `c5929d3 Add Vacancy entity`
-- `c2cc04f Add error response DTO`
-- `1cfe9dc Handle validation errors`
-- `11ab7d1 Verify update validation error response`
+- [x] Создан Spring Boot 4.1.0 проект на Java 21 и Maven.
+- [x] Добавлен Spring Web.
+- [x] Реализован `GET /api/hello`.
+- [x] Приложение запускается на порту 8080.
+- [x] Добавлены Spring Data JPA и PostgreSQL JDBC Driver.
+- [x] Создана база данных `internship_tracker`.
+- [x] Создана роль `internship_tracker_app`.
+- [x] Пароль базы передаётся через переменную окружения `DB_PASSWORD`.
+- [x] Секреты не хранятся в Git.
+
+### Company
+
+Для `Company` завершён полный CRUD:
+
+- [x] Entity и timestamps.
+- [x] Repository и repository-тест.
+- [x] Service и unit-тесты.
+- [x] `CompanyRequest` и `CompanyResponse`.
+- [x] Ручной Mapper и mapper-тесты.
+- [x] Bean Validation.
+- [x] `ResourceNotFoundException`.
+- [x] `ErrorResponse` и `GlobalExceptionHandler`.
+- [x] Controller и `MockMvc`-тесты.
+
+Реализованные endpoint:
+
+```text
+GET    /api/companies
+POST   /api/companies
+GET    /api/companies/{id}
+PUT    /api/companies/{id}
+DELETE /api/companies/{id}
+```
+
+### Vacancy
+
+Для `Vacancy` завершён полный CRUD:
+
+- [x] Enum `WorkFormat`.
+- [x] Значения `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
+- [x] Entity `Vacancy`.
+- [x] Связь `Many-to-One` с `Company` через `company_id`.
+- [x] `FetchType.LAZY`.
+- [x] Enum хранится через `EnumType.STRING`.
+- [x] Правило `null workFormat → NOT_SPECIFIED`.
+- [x] `@PrePersist` и `@PreUpdate` для timestamps.
+- [x] `VacancyRepository` и repository-тест.
+- [x] `VacancyRequest` и `VacancyResponse`.
+- [x] Bean Validation.
+- [x] Ручной Mapper и mapper-тесты.
+- [x] Service и unit-тесты.
+- [x] Controller и `MockMvc`-тесты.
+- [x] Успешные сценарии CRUD.
+- [x] Validation errors.
+- [x] `404 Not Found` для отсутствующей Vacancy.
+- [x] `404 Not Found` для отсутствующей Company при создании и обновлении.
+
+Реализованные endpoint:
+
+```text
+POST   /api/vacancies
+GET    /api/vacancies
+GET    /api/vacancies/{id}
+PUT    /api/vacancies/{id}
+DELETE /api/vacancies/{id}
+```
+
+### Application
+
+Для `Application` реализована основная часть CRUD:
+
+- [x] Enum `ApplicationStatus`.
+- [x] Значения `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
+- [x] Entity `Application`.
+- [x] Связь `Many-to-One` с `Vacancy` через `vacancy_id`.
+- [x] `FetchType.LAZY`.
+- [x] Статус хранится через `EnumType.STRING`.
+- [x] Поля `appliedAt`, `nextContactAt` и `notes`.
+- [x] Ограничение `notes` до 2000 символов.
+- [x] `@PrePersist` и `@PreUpdate` для timestamps.
+- [x] `ApplicationRepository` и repository-тест.
+- [x] `ApplicationRequest`.
+- [x] `ApplicationResponse`.
+- [x] `ApplicationUpdateRequest`.
+- [x] Ручной `ApplicationMapper`.
+- [x] Mapper-тесты для создания, ответа и обновления Entity.
+- [x] `ApplicationService`.
+- [x] Service unit-тесты.
+- [x] `ApplicationController`.
+- [x] Controller-тесты через `MockMvc`.
+- [x] Создание Application.
+- [x] Получение списка.
+- [x] Получение по `id`.
+- [x] Обновление Vacancy, дат и заметок.
+- [x] Статус не изменяется через обычный `PUT`.
+- [x] `404 Not Found` для отсутствующего Application.
+- [x] `404 Not Found` для отсутствующей Vacancy при создании и обновлении.
+- [ ] Отдельное изменение статуса через `PATCH`.
+- [ ] Удаление Application.
+- [ ] Проверка допустимых переходов статуса.
+- [ ] Проверка согласованности дат.
+
+Реализованные endpoint:
+
+```text
+POST /api/applications
+GET  /api/applications
+GET  /api/applications/{id}
+PUT  /api/applications/{id}
+```
+
+Запланированные endpoint:
+
+```text
+PATCH  /api/applications/{id}/status
+DELETE /api/applications/{id}
+```
+
+---
+
+## Текущий контракт Application API
+
+### POST /api/applications
+
+- принимает `ApplicationRequest`;
+- возвращает `ApplicationResponse`;
+- успешный статус: `201 Created`;
+- Vacancy ищется по `vacancyId`;
+- при отсутствии Vacancy возвращается `404 Not Found`;
+- request содержит начальный `status`.
+
+### GET /api/applications
+
+- возвращает `List<ApplicationResponse>`;
+- успешный статус: `200 OK`;
+- каждая Entity преобразуется через `ApplicationMapper`;
+- пустая база должна возвращать пустой список, а не `404`.
+
+### GET /api/applications/{id}
+
+- возвращает `ApplicationResponse`;
+- успешный статус: `200 OK`;
+- при отсутствии Application возвращается `404 Not Found`.
+
+### PUT /api/applications/{id}
+
+- принимает `ApplicationUpdateRequest`;
+- обновляет Vacancy, `appliedAt`, `nextContactAt` и `notes`;
+- не изменяет `status`;
+- возвращает `ApplicationResponse`;
+- успешный статус: `200 OK`;
+- сначала ищется Application;
+- затем ищется Vacancy;
+- при отсутствии Application или Vacancy возвращается `404 Not Found`;
+- Entity изменяется через `ApplicationMapper#updateEntity`;
+- сохранение выполняется только после успешных поисков.
+
+### ApplicationRequest
+
+Поля:
+
+```text
+Long vacancyId
+ApplicationStatus status
+LocalDateTime appliedAt
+LocalDateTime nextContactAt
+String notes
+```
+
+Validation:
+
+- `vacancyId` обязателен;
+- `status` обязателен;
+- `notes` — максимум 2000 символов;
+- бизнес-проверки дат пока не добавлены.
+
+### ApplicationUpdateRequest
+
+Поля:
+
+```text
+Long vacancyId
+LocalDateTime appliedAt
+LocalDateTime nextContactAt
+String notes
+```
+
+Validation:
+
+- `vacancyId` обязателен;
+- `notes` — максимум 2000 символов;
+- поля `status` намеренно нет;
+- изменение статуса будет отдельной бизнес-операцией.
+
+### ApplicationResponse
+
+Поля:
+
+```text
+Long id
+Long vacancyId
+String vacancyTitle
+Long companyId
+String companyName
+ApplicationStatus status
+LocalDateTime appliedAt
+LocalDateTime nextContactAt
+String notes
+LocalDateTime createdAt
+LocalDateTime updatedAt
+```
+
+Response не возвращает Entity `Vacancy` или `Company` напрямую.
+
+---
+
+## Архитектурные правила, которые уже применяются
+
+Поток запроса:
+
+```text
+HTTP request → Controller → Service → Repository → PostgreSQL
+```
+
+- Controller отвечает за HTTP-запросы и ответы.
+- Service отвечает за бизнес-логику.
+- Repository отвечает за доступ к данным.
+- Entity описывает модель хранения.
+- DTO описывает внешний API-контракт.
+- Mapper преобразует Entity и DTO.
+- Controller не обращается к Repository напрямую.
+- Mapper не обращается к Repository.
+- Entity не возвращаются клиенту напрямую.
+- Используется constructor injection.
+- Ошибки обрабатываются централизованно.
+- Маппинг пока пишется вручную, без MapStruct.
+- Изменение статуса выделяется в отдельную бизнес-операцию.
+- Repository не проверяется из Controller-тестов напрямую.
+- При ошибочных сценариях тестируется отсутствие лишних взаимодействий.
+
+---
+
+## Что уже понимается уверенно
+
+### Git
+
+- назначение working tree и staging area;
+- `git status`, `git add`, `git commit`, `git push`;
+- отличие `git diff` от `git diff --cached`;
+- добавление в staging только нужных файлов;
+- проверка будущего коммита до `git commit`;
+- необходимость маленьких осмысленных коммитов;
+- отделение `PROJECT_STATUS.md` от code-коммитов;
+- работа с новым untracked-файлом;
+- проверка отсутствия секретов перед коммитом.
+
+### Java, Spring и архитектура
+
+- назначение Controller, Service, Repository, Entity, DTO и Mapper;
+- dependency injection через конструктор;
+- `@RestController`, `@Service`, `@Component`;
+- `@Valid` и Bean Validation;
+- единая обработка `400 Bad Request` и `404 Not Found`;
+- почему бизнес-логика не должна находиться в Controller;
+- почему Entity не следует возвращать клиенту напрямую;
+- различие request DTO и response DTO;
+- обновление существующей Entity через Mapper;
+- зачем статус исключён из обычного update DTO.
+
+### JPA
+
+- `@Entity`, `@Table`, `@Id`, `@GeneratedValue`;
+- `@Column`;
+- `@ManyToOne` и `@JoinColumn`;
+- `FetchType.LAZY`;
+- `EnumType.STRING`;
+- `@PrePersist` и `@PreUpdate`;
+- `findById()`, `findAll()`, `save()` и `delete()`;
+- назначение `Optional` и `orElseThrow()`.
+
+### Тестирование
+
+- структура Arrange, Act, Assert;
+- назначение mock;
+- `when(...).thenReturn(...)`;
+- `thenThrow(...)`;
+- `assertSame`, `assertEquals`, `assertThrows`;
+- `verify(...)`, `never()`, `verifyNoInteractions(...)`;
+- Service unit-тесты;
+- mapper-тесты;
+- `@WebMvcTest` и `MockMvc`;
+- проверка HTTP status, Content-Type и JSON body;
+- проверка единого формата ошибок;
+- проверка отсутствия `save()` и Mapper-вызовов при ошибках.
+
+---
+
+## Что понимается частично и требует повторения
+
+- различие unit-, controller-, repository- и будущих интеграционных тестов;
+- поведение LAZY-связей вне активной JPA-сессии;
+- границы бизнес-логики между Entity, Mapper и Service;
+- правила допустимых переходов `ApplicationStatus`;
+- проектирование отдельного request DTO для `PATCH`;
+- проверки согласованности `appliedAt` и `nextContactAt`;
+- транзакции и назначение `@Transactional`;
+- фильтрация, сортировка и пагинация;
+- управление схемой базы через Flyway вместо автоматического Hibernate DDL.
+
+---
+
+## Технический долг и ограничения текущей версии
+
+- Для `Application` ещё нет изменения статуса через отдельный `PATCH`.
+- Для `Application` ещё нет удаления.
+- Нет правил допустимых переходов статуса.
+- Нет бизнес-проверок дат.
+- Схема пока не переведена на Flyway.
+- Нет пагинации, сортировки и фильтрации.
+- Нет Swagger/OpenAPI.
+- Нет Dockerfile и `compose.yaml`.
+- Нет Testcontainers.
+- Нет `Interview`.
+- Нет User, Spring Security и JWT.
+- Нет GitHub Actions.
+- Нет финального README с архитектурой и примерами API.
+- Дублирующиеся части CRUD пока не обобщаются намеренно, чтобы сначала понять базовые слои.
+- `One-to-Many` коллекции не добавляются без практической необходимости.
+- MapStruct не добавляется, пока ручной маппинг остаётся понятным и небольшим.
+
+---
 
 ## Следующее задание
 
-1. Обновить локальный `PROJECT_STATUS.md` этим файлом и сделать отдельный status-коммит.
-2. Перейти в чат 03.
-3. В чате 03 начать следующий блок: `Vacancy DTO`, `VacancyMapper`, `VacancyService`, `VacancyController`.
-4. После DTO и service добавить validation и обработку `404` для `Vacancy`.
+Реализовать отдельное изменение статуса Application:
 
-## Критерии завершения текущего подэтапа
+```text
+PATCH /api/applications/{id}/status
+```
 
-- [x] Созданы `CompanyRequest` и `CompanyResponse`.
-- [x] Создан ручной `CompanyMapper`.
-- [x] Реализованы оба направления преобразования.
-- [x] Mapper покрыт unit-тестами.
-- [x] `CompanyMapper` зарегистрирован как Spring-компонент.
-- [x] Mapper внедрён в `CompanyController`.
-- [x] `GET /api/companies` возвращает `List<CompanyResponse>`.
-- [x] `GET /api/companies/{id}` возвращает `CompanyResponse`.
-- [x] `POST /api/companies` принимает `CompanyRequest`.
-- [x] `POST /api/companies` возвращает `CompanyResponse`.
-- [x] `PUT /api/companies/{id}` принимает `CompanyRequest`.
-- [x] `PUT /api/companies/{id}` возвращает `CompanyResponse`.
-- [x] Controller больше не возвращает Entity напрямую для endpoint с телом ответа.
-- [x] Controller-тесты проходят после перехода на DTO.
-- [x] Добавлена зависимость Bean Validation.
-- [x] В `CompanyRequest` добавлены правила для `name`, `website` и `description`.
-- [x] В Controller добавлен `@Valid` для `POST` и `PUT`.
-- [x] Добавлены controller-тесты на невалидные запросы.
-- [x] Создан `ErrorResponse`.
-- [x] Создан `GlobalExceptionHandler`.
-- [x] Создан `ResourceNotFoundException`.
-- [x] Validation-ошибки возвращаются в едином JSON-формате.
-- [x] JSON validation-ошибок покрыт controller-тестами для `POST` и `PUT`.
-- [x] Not found ошибки для `GET /api/companies/{id}` возвращаются в едином JSON-формате.
-- [x] Not found ошибки для `PUT /api/companies/{id}` возвращаются в едином JSON-формате.
-- [x] Not found ошибки для `DELETE /api/companies/{id}` возвращаются в едином JSON-формате.
-- [x] JSON not found ошибок покрыт controller-тестами для `GET`, `PUT` и `DELETE`.
-- [x] Поведение `DELETE /api/companies/{id}` для отсутствующего `id` уточнено: возвращается `404 Not Found` с JSON `ErrorResponse`.
-- [x] Все 27 тестов завершаются с `BUILD SUCCESS`.
-- [x] Code-коммиты отправлены на GitHub.
-- [x] Уточнено поведение `DELETE /api/companies/{id}` для отсутствующего `id`.
-- [x] `PROJECT_STATUS.md` обновлён и отправлен на GitHub после завершения блока `DELETE` not found.
+### Предварительный план
 
-## Вопросы для повторения
+1. Создать `ApplicationStatusUpdateRequest`.
+2. Добавить validation обязательного `status`.
+3. Добавить метод Service для изменения статуса.
+4. Найти Application по `id`.
+5. Изменить только поле `status`.
+6. Сохранить Application.
+7. Добавить Controller endpoint.
+8. Добавить unit- и controller-тесты.
+9. Проверить `404`, validation и отсутствие лишних взаимодействий.
+10. Позже добавить правила допустимых переходов между статусами.
 
-1. Чем Entity отличается от DTO?
-2. Почему не стоит возвращать JPA Entity клиенту напрямую?
-3. Зачем разделять `CompanyRequest` и `CompanyResponse`?
-4. Почему в `CompanyRequest` нет `id`, `createdAt` и `updatedAt`?
-5. Что Java автоматически создаёт для `record`?
-6. Чем `request.name()` отличается от `company.getName()`?
-7. Что делает `CompanyMapper.toEntity()`?
-8. Что делает `CompanyMapper.toResponse()`?
-9. Почему mapper можно тестировать без Spring?
-10. Почему для теста `toResponse()` использован mock `Company`?
-11. Что нужно сделать, чтобы Spring смог внедрить `CompanyMapper` в Controller?
-12. Почему в `CompanyControllerTest` понадобился `@Import(CompanyMapper.class)`?
-13. Почему `@WebMvcTest` сам не подгрузил обычный `@Component`?
-14. Почему Service пока продолжает работать с Entity?
-15. Какие endpoint теперь принимают `CompanyRequest`?
-16. Какие endpoint теперь возвращают `CompanyResponse`?
-17. Почему для `DELETE /api/companies/{id}` DTO не нужен?
-18. Что делает `@Valid`?
-19. Чем `@NotBlank` отличается от `@Size`?
-20. Почему `@Size(max = 255)` не запрещает `null`?
-21. Почему при validation-ошибке Service не должен вызываться?
-22. Зачем нужен `ErrorResponse`?
-23. Зачем нужен `@RestControllerAdvice`?
-24. Что делает `@ExceptionHandler`?
-25. Почему `ResourceNotFoundException` наследуется от `RuntimeException`?
-26. Что делает `orElseThrow(...)`?
-27. Почему после `orElseThrow(...)` можно работать с обычным `Company`, а не с `Optional<Company>`?
-28. Почему для `404` используется пустой `fieldErrors`?
-29. Почему обработку ошибок лучше держать в `GlobalExceptionHandler`?
-30. Какой ответ должен возвращать `DELETE /api/companies/{id}`, если компания не найдена?
+Пока не добавлять в этот шаг:
 
-## Журнал прогресса
+- сложную таблицу переходов статусов;
+- автоматическое изменение `appliedAt`;
+- историю статусов;
+- отдельную Entity для истории;
+- Spring Security;
+- фильтрацию;
+- удаление Application одновременно с PATCH.
 
-### 2026-07-06
+---
 
-- Настроены JDK, Maven, Git, PostgreSQL и GitHub.
-- Создан Spring Boot проект.
-- Реализован `GET /api/hello`.
-- Создана Entity `Company`.
-- Последний коммит дня: `bf02b16 Add Company entity`.
+## Вопросы для повторения перед продолжением
 
-### 2026-07-07
+1. Почему `status` отсутствует в `ApplicationUpdateRequest`?
+2. Почему изменение статуса считается отдельной бизнес-операцией?
+3. Что должен вернуть Service, если Application с нужным `id` отсутствует?
+4. Почему Controller не должен сам вызывать `application.setStatus(...)`?
+5. Какие взаимодействия не должны происходить, если Application не найден?
+6. Чем `PUT /api/applications/{id}` отличается от будущего `PATCH /api/applications/{id}/status`?
+7. Почему правила допустимых переходов статуса должны находиться в Service?
 
-- Созданы `CompanyRepository` и Repository-тесты.
-- Создан `CompanyService`.
-- Реализованы создание, список и поиск по `id`.
-- Созданы Service unit-тесты.
-- Все 7 тестов завершились с `BUILD SUCCESS`.
+---
 
-### 2026-07-08
+## Рекомендуемый следующий code-коммит
 
-- Реализованы удаление и обновление в Service.
-- Создан `CompanyController`.
-- Реализованы все пять CRUD endpoint.
-- CRUD endpoint проверены вручную.
-- Все 10 тестов завершились с `BUILD SUCCESS`.
+После реализации, ревью, исправлений и успешных тестов:
 
-### 2026-07-09
+```text
+Add Application status update endpoint
+```
 
-- Создан `CompanyControllerTest`.
-- Добавлены тесты списка, поиска, создания и удаления.
-- Освоены `@WebMvcTest`, `MockMvc`, `@MockitoBean`, JSONPath и `MediaType.APPLICATION_JSON`.
-- Полный набор из 15 тестов завершился с `BUILD SUCCESS`.
+## Рекомендуемый документационный коммит
 
-### 2026-07-13
+Для фиксации этого файла отдельным коммитом:
 
-#### Выполнено
-
-- Добавлен controller-тест успешного обновления компании.
-- Добавлен controller-тест `404 Not Found` при обновлении отсутствующей компании.
-- Полный набор из 17 тестов завершился с `BUILD SUCCESS`.
-- Созданы `CompanyRequest` и `CompanyResponse` как `record`.
-- Создан ручной `CompanyMapper`.
-- Добавлен `CompanyMapperTest`.
-- Проверены преобразования `CompanyRequest → Company` и `Company → CompanyResponse`.
-- Полный набор из 19 тестов завершился с `BUILD SUCCESS`.
-- Все рабочие коммиты отправлены на GitHub.
-- Ветка `main` синхронизирована с `origin/main`.
-
-#### Изучено
-
-- Назначение DTO.
-- Разница между входным и выходным DTO.
-- Назначение Java `record`.
-- Назначение mapper.
-- Ручное преобразование DTO и Entity.
-- Unit-тест mapper без Spring-контекста.
-- Использование mock Entity, когда нет setters для серверных полей.
-
-#### Возникшие проблемы и исправления
-
-- Сначала был создан лишний DTO-класс `Company`; он удалён.
-- В `CompanyResponse` компоненты record были разделены точками с запятой; исправлено на запятые.
-- В тесте `id` ошибочно сравнивался со строкой `"1L"`; исправлено на `1L`.
-- В конце DTO отсутствовал перевод строки; форматирование исправлено.
-- В `CompanyMapper` и тестах выровнено форматирование.
-
-#### Коммиты
-
-- `559ce0a Add company update controller test`
-- `1e3b33a Add missing company update controller test`
-- `25fc666 Update project status before Company DTO stage`
-- `291b89f Add Company DTOs and mapper`
-
-### 2026-07-15
-
-#### Выполнено
-
-- `CompanyMapper` зарегистрирован как Spring-компонент через `@Component`.
-- `CompanyMapper` внедрён в `CompanyController` через конструктор.
-- Endpoint `GET /api/companies/{id}` переведён с `Company` на `CompanyResponse`.
-- В `CompanyControllerTest` добавлен `@Import(CompanyMapper.class)`.
-- `GET /api/companies` переведён на возврат `List<CompanyResponse>`.
-- `POST /api/companies` переведён на `CompanyRequest` и `CompanyResponse`.
-- `PUT /api/companies/{id}` переведён на `CompanyRequest` и `CompanyResponse`.
-- Добавлена зависимость `spring-boot-starter-validation`.
-- В `CompanyRequest` добавлены validation-аннотации для `name`, `website` и `description`.
-- В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
-- Добавлены controller-тесты для validation-ошибок.
-- Временной диагностикой через `andDo(print())` проверено, что стандартный Spring response для validation error имел `Status = 400`, `Content type = null`, пустой `Body`.
-- Создан `ErrorResponse`.
-- Создан `GlobalExceptionHandler`.
-- `GlobalExceptionHandler` обрабатывает `MethodArgumentNotValidException`.
-- Validation-ошибки теперь возвращаются в JSON-формате `ErrorResponse`.
-- В `CompanyControllerTest` проверяется JSON validation-ошибки для `POST`.
-- В `CompanyControllerTest` проверяется JSON validation-ошибки для `PUT`.
-- Запускались точечные controller-тесты после каждого изменения.
-- Запускался полный `CompanyControllerTest`.
-- Запускался полный набор тестов проекта.
-- Все 27 тестов завершились с `BUILD SUCCESS`.
-- Code-коммиты отправлены на GitHub.
-
-#### Изучено
-
-- Зачем mapper должен быть Spring bean, если Controller получает его через constructor injection.
-- Почему `@WebMvcTest` не всегда загружает обычные `@Component`.
-- Как явно добавить mapper в controller-тест через `@Import`.
-- Как постепенно переводить Controller на DTO, не ломая весь CRUD сразу.
-- Почему Service пока может продолжать работать с Entity, а Controller уже может принимать и возвращать DTO.
-- Как использовать `stream().map(...).toList()` для преобразования списка Entity в список DTO.
-- Как работает базовая Bean Validation для `@RequestBody`.
-- Почему при невалидном request Service не должен вызываться.
-- Как стандартный Spring response для validation-ошибки отличается от собственного `ErrorResponse`.
-- Как `@RestControllerAdvice` и `@ExceptionHandler` помогают централизовать обработку ошибок.
-- Как через `jsonPath` проверить вложенные поля JSON-ответа.
-
-#### Коммиты
-
-- `a1811e5 Use Company mapper in lookup endpoint`
-- `7c86add Update project status after mapper lookup endpoint`
-- `ee036c5 Use Company response DTO in list endpoint`
-- `e644e66 Use Company DTOs in creation endpoint`
-- `fb51605 Use Company DTOs in update endpoint`
-- `011a0c3 Update project status after Company DTO migration`
-- `2931f1a Add Bean Validation dependency`
-- `87e18c8 Add Company request name validation`
-- `b6b37b4 Add Company request length validation`
-- `d544f4c Update project status after Company validation`
-- `c2cc04f Add error response DTO`
-- `1cfe9dc Handle validation errors`
-- `11ab7d1 Verify update validation error response`
-
-### 2026-07-16
-
-#### Выполнено
-
-- Обновлён `PROJECT_STATUS.md` после validation error handling.
-- Создан `ResourceNotFoundException`.
-- В `GlobalExceptionHandler` добавлен handler для `ResourceNotFoundException`.
-- `GET /api/companies/{id}` переведён на `orElseThrow(...)` и `ResourceNotFoundException`.
-- Тест `shouldReturnNotFoundWhenCompanyDoesNotExist` обновлён: теперь проверяет JSON `ErrorResponse`.
-- Коммит `Handle not found errors` отправлен на GitHub.
-- `PUT /api/companies/{id}` переведён на `orElseThrow(...)` и `ResourceNotFoundException`.
-- Тест `shouldReturnNotFoundWhenUpdatingMissingCompany` обновлён: теперь проверяет JSON `ErrorResponse`.
-- Коммит `Handle update not found errors` отправлен на GitHub.
-- Поведение `DELETE /api/companies/{id}` для отсутствующей компании уточнено: возвращается `404 Not Found` с JSON `ErrorResponse`.
-- В `CompanyService.deleteCompany(id)` добавлена проверка `existsById(id)`.
-- Старый service-тест успешного удаления обновлён: теперь mock возвращает `true` для `existsById(id)`.
-- Добавлен service-тест `shouldThrowResourceNotFoundExceptionWhenDeletingMissingCompany`.
-- Добавлен controller-тест `shouldReturnNotFoundWhenDeletingMissingCompany`.
-- Коммит `Handle delete not found errors` отправлен на GitHub.
-- Обновлён `PROJECT_STATUS.md` после delete error handling.
-- Создан enum `WorkFormat`.
-- Создана JPA-сущность `Vacancy`.
-- Настроена связь `Many-to-One` от `Vacancy` к `Company`.
-- Создан `VacancyRepository`.
-- Создан `VacancyRepositoryTest`.
-- Проверено сохранение и чтение `Vacancy` через PostgreSQL.
-- Полный набор тестов проекта прошёл: 27 tests, `BUILD SUCCESS`.
-- Коммит `Add Vacancy entity` отправлен на GitHub.
-- Запускался точечный тест для `GET` not found.
-- Запускался точечный тест для `PUT` not found.
-- Запускался полный `CompanyControllerTest`.
-- Запускался полный набор тестов проекта.
-- Все 27 тестов завершились с `BUILD SUCCESS`.
-
-#### Изучено
-
-- Что `RuntimeException` не требует обязательного `throws` и `try/catch`.
-- Как `ResourceNotFoundException` превращается в HTTP-ответ через `@ExceptionHandler`.
-- Что `Optional.empty()` — это отсутствие значения, а exception — способ прервать обычный поток выполнения.
-- Что `orElseThrow(...)` либо возвращает значение из `Optional`, либо выбрасывает exception.
-- Почему после `orElseThrow(...)` можно работать с обычным `Company`.
-- Почему у `404` есть тело ответа `ErrorResponse`, но `fieldErrors` пустой.
-- Почему централизованная обработка ошибок лучше дублирования JSON в каждом Controller.
-- Как тестировать `void` метод Mockito через `doThrow(...).when(...).method(...)`.
-- Почему после добавления `existsById(id)` нужно обновить старый service-тест удаления.
-- Что `DELETE` может возвращать `404`, если API хочет явно сообщать клиенту, что ресурс не найден.
-- Что `enum` ограничивает набор допустимых значений.
-- Почему в Entity `Vacancy` хранится объект `Company`, а не только `companyId`.
-- Почему `WorkFormat` лучше сохранять через `EnumType.STRING`.
-- Почему Mockito `verify(...)` не используется для реального repository в `@DataJpaTest`.
-
-#### Коммиты
-
-- `c2ee641 Update project status after validation error handling`
-- `a6a7972 Handle not found errors`
-- `773760d Handle update not found errors`
-- `72fa767 Update project status after not found handling`
-- `8867709 Handle delete not found errors`
-- `75348b4 Update project status after delete error handling`
-- `c5929d3 Add Vacancy entity`
-
-#### Следующее действие
-
-- Обновить `PROJECT_STATUS.md` в репозитории отдельным status-коммитом.
-- После status-коммита перейти в чат 03.
-- В чате 03 продолжить с `Vacancy DTO`, mapper, service и controller.
-
-## Точка остановки
-
-### 2026-07-16
-
-- Для `Company` реализован полный CRUD.
-- Все пять CRUD endpoint проверены вручную.
-- В `CompanyControllerTest` находится 11 тестов.
-- Созданы `CompanyRequest` и `CompanyResponse`.
-- Создан и протестирован ручной `CompanyMapper`.
-- `CompanyMapper` зарегистрирован через `@Component`.
-- `CompanyMapper` внедрён в `CompanyController`.
-- Все основные endpoint `CompanyController` переведены на DTO там, где DTO нужен.
-- `GET /api/companies` возвращает `List<CompanyResponse>`.
-- `GET /api/companies/{id}` возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`.
-- `POST /api/companies` принимает `CompanyRequest` и возвращает `CompanyResponse`.
-- `PUT /api/companies/{id}` принимает `CompanyRequest` и возвращает `CompanyResponse` или JSON `ErrorResponse` с `404 Not Found`.
-- `DELETE /api/companies/{id}` возвращает `204 No Content`, если компания существует, или JSON `ErrorResponse` с `404 Not Found`, если компания не найдена.
-- В `CompanyRequest` добавлены validation-правила для `name`, `website` и `description`.
-- В `CompanyController` добавлен `@Valid` для `POST` и `PUT`.
-- Validation покрыта controller-тестами.
-- Создан `ErrorResponse`.
-- Создан `GlobalExceptionHandler`.
-- Создан `ResourceNotFoundException`.
-- Validation-ошибки возвращаются в едином JSON-формате.
-- `404 Not Found` для `GET`, `PUT` и `DELETE` возвращается в едином JSON-формате.
-- В `CompanyMapperTest` находится 2 unit-теста.
-- Созданы `WorkFormat`, `Vacancy`, `VacancyRepository`, `VacancyRepositoryTest`.
-- `VacancyRepositoryTest` проверяет сохранение и чтение вакансии с обязательной связью на компанию.
-- Всего в проекте 27 тестов.
-- Все тесты завершаются с `BUILD SUCCESS`.
-- Последний рабочий code-коммит: `c5929d3 Add Vacancy entity`.
-- Коммит отправлен на GitHub.
-- Ветка `main` синхронизирована с `origin/main`.
-- Рабочее дерево чистое перед обновлением `PROJECT_STATUS.md`.
-- Следующий шаг: обновить `PROJECT_STATUS.md` отдельным коммитом, затем перейти в чат 03.
-- Перед запуском приложения и полного набора интеграционных тестов в новом терминале нужно установить `DB_PASSWORD`.
+```text
+Update project status after Application update endpoint
+```
