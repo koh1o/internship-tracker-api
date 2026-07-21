@@ -16,11 +16,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -156,5 +158,63 @@ class ApplicationControllerTest {
                         .value("Vacancy id is required"));
 
         verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldGetAllApplications() throws Exception {
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response",
+                LocalDateTime.of(2026, 7, 21, 10, 5),
+                LocalDateTime.of(2026, 7, 21, 10, 5)
+        );
+
+        ApplicationResponse secondResponse = new ApplicationResponse(
+                31L,
+                21L,
+                "QA Internship",
+                6L,
+                "Another Company",
+                ApplicationStatus.INTERVIEW,
+                LocalDateTime.of(2026, 7, 22, 11, 0),
+                LocalDateTime.of(2026, 7, 29, 11, 0),
+                "Interview scheduled",
+                LocalDateTime.of(2026, 7, 22, 11, 5),
+                LocalDateTime.of(2026, 7, 23, 12, 0)
+        );
+
+        when(applicationService.getAllApplications())
+                .thenReturn(List.of(firstApplication, secondApplication));
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        mockMvc.perform(get("/api/applications"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(firstResponse.id()))
+                .andExpect(jsonPath("$[0].vacancyId").value(firstResponse.vacancyId()))
+                .andExpect(jsonPath("$[0].status")
+                        .value(firstResponse.status().name()))
+                .andExpect(jsonPath("$[1].id").value(secondResponse.id()))
+                .andExpect(jsonPath("$[1].vacancyId").value(secondResponse.vacancyId()))
+                .andExpect(jsonPath("$[1].status")
+                        .value(secondResponse.status().name()));
+
+        verify(applicationService).getAllApplications();
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
     }
 }

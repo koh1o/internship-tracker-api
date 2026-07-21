@@ -11,6 +11,7 @@ import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,5 +98,25 @@ class ApplicationServiceTest {
 
         verify(vacancyRepository).findById(vacancyId);
         verifyNoInteractions(applicationMapper, applicationRepository);
+    }
+
+    @Test
+    void shouldGetAllApplications() {
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        when(applicationRepository.findAll())
+                .thenReturn(applications);
+
+        List<Application> result = applicationService.getAllApplications();
+
+        assertSame(applications, result);
+
+        verify(applicationRepository).findAll();
     }
 }

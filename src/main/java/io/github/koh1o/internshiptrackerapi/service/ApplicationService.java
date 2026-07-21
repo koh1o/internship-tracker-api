@@ -9,6 +9,8 @@ import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ApplicationService {
 
@@ -36,5 +38,9 @@ public class ApplicationService {
 
         Application savedApplication = applicationRepository.save(application);
         return savedApplication;
+    }
+
+    public List<Application> getAllApplications() {
+        return applicationRepository.findAll();
     }
 }
