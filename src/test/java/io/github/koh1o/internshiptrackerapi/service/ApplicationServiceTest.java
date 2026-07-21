@@ -119,4 +119,36 @@ class ApplicationServiceTest {
 
         verify(applicationRepository).findAll();
     }
+
+    @Test
+    void shouldGetApplicationById() {
+        Long applicationId = 30L;
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+
+        Application result = applicationService.getApplicationById(applicationId);
+
+        assertSame(application, result);
+
+        verify(applicationRepository).findById(applicationId);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenGettingMissingApplication() {
+        Long applicationId = 999L;
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.getApplicationById(applicationId)
+        );
+
+        assertEquals("Application not found with id: 999", exception.getMessage());
+
+        verify(applicationRepository).findById(applicationId);
+    }
 }

@@ -217,4 +217,76 @@ class ApplicationControllerTest {
         verify(applicationMapper).toResponse(firstApplication);
         verify(applicationMapper).toResponse(secondApplication);
     }
+
+    @Test
+    void shouldGetApplicationById() throws Exception {
+        Long applicationId = 30L;
+
+        Application application = mock(Application.class);
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response",
+                LocalDateTime.of(2026, 7, 21, 10, 5),
+                LocalDateTime.of(2026, 7, 21, 10, 5)
+        );
+
+        when(applicationService.getApplicationById(applicationId))
+                .thenReturn(application);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/applications/{id}", applicationId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(30L))
+                .andExpect(jsonPath("$.vacancyId").value(20L))
+                .andExpect(jsonPath("$.vacancyTitle").value("Java Backend Intern"))
+                .andExpect(jsonPath("$.companyId").value(5L))
+                .andExpect(jsonPath("$.companyName").value("Example Company"))
+                .andExpect(jsonPath("$.status").value("APPLIED"))
+                .andExpect(jsonPath("$.appliedAt").value("2026-07-21T10:00:00"))
+                .andExpect(jsonPath("$.nextContactAt").value("2026-07-28T10:00:00"))
+                .andExpect(jsonPath("$.notes").value("Waiting for response"))
+                .andExpect(jsonPath("$.createdAt").value("2026-07-21T10:05:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-07-21T10:05:00"));
+
+        verify(applicationService).getApplicationById(applicationId);
+        verify(applicationMapper).toResponse(application);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGettingMissingApplication()
+            throws Exception {
+
+        Long applicationId = 999L;
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Application not found with id: " + applicationId
+                );
+
+        when(applicationService.getApplicationById(applicationId))
+                .thenThrow(exception);
+
+        mockMvc.perform(get("/api/applications/{id}", applicationId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message")
+                        .value("Application not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/applications/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).getApplicationById(applicationId);
+        verifyNoInteractions(applicationMapper);
+    }
 }

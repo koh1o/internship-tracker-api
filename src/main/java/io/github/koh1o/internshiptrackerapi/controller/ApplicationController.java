@@ -8,6 +8,7 @@ import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,5 +51,16 @@ public class ApplicationController {
         return applications.stream()
                 .map(applicationMapper::toResponse)
                 .toList();
+    }
+
+    @GetMapping("/{id}")
+    public ApplicationResponse getApplicationById(
+            @PathVariable Long id
+    ) {
+        Application application = applicationService.getApplicationById(id);
+
+        ApplicationResponse response = applicationMapper.toResponse(application);
+
+        return response;
     }
 }

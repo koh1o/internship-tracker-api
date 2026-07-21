@@ -43,4 +43,13 @@ public class ApplicationService {
     public List<Application> getAllApplications() {
         return applicationRepository.findAll();
     }
+
+    public Application getApplicationById(Long id) {
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Application not found with id: " + id
+                ));
+
+        return application;
+    }
 }
