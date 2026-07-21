@@ -1,0 +1,160 @@
+package io.github.koh1o.internshiptrackerapi.controller;
+
+import tools.jackson.databind.ObjectMapper;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.entity.Application;
+import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
+import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
+import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(ApplicationController.class)
+class ApplicationControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private ApplicationService applicationService;
+
+    @MockitoBean
+    private ApplicationMapper applicationMapper;
+
+    @Test
+    void shouldCreateApplication() throws Exception {
+        ApplicationRequest request = new ApplicationRequest(
+                20L,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response"
+        );
+
+        Application savedApplication = mock(Application.class);
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response",
+                LocalDateTime.of(2026, 7, 21, 10, 5),
+                LocalDateTime.of(2026, 7, 21, 10, 5)
+        );
+
+        when(applicationService.createApplication(request))
+                .thenReturn(savedApplication);
+
+        when(applicationMapper.toResponse(savedApplication))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(30L))
+                .andExpect(jsonPath("$.vacancyId").value(20L))
+                .andExpect(jsonPath("$.vacancyTitle").value("Java Backend Intern"))
+                .andExpect(jsonPath("$.companyId").value(5L))
+                .andExpect(jsonPath("$.companyName").value("Example Company"))
+                .andExpect(jsonPath("$.status").value("APPLIED"))
+                .andExpect(jsonPath("$.appliedAt").value("2026-07-21T10:00:00"))
+                .andExpect(jsonPath("$.nextContactAt").value("2026-07-28T10:00:00"))
+                .andExpect(jsonPath("$.notes").value("Waiting for response"))
+                .andExpect(jsonPath("$.createdAt").value("2026-07-21T10:05:00"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-07-21T10:05:00"));
+
+        verify(applicationService).createApplication(request);
+        verify(applicationMapper).toResponse(savedApplication);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenCreatingForMissingVacancy()
+            throws Exception {
+
+        ApplicationRequest request = new ApplicationRequest(
+                999L,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 21, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Waiting for response"
+        );
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Vacancy not found with id: 999"
+                );
+
+        when(applicationService.createApplication(request))
+                .thenThrow(exception);
+
+        mockMvc.perform(post("/api/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message")
+                        .value("Vacancy not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).createApplication(request);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenVacancyIdIsMissing()
+            throws Exception {
+
+        String requestJson = """
+                {
+                  "status": "APPLIED",
+                  "appliedAt": "2026-07-21T10:00:00",
+                  "nextContactAt": "2026-07-28T10:00:00",
+                  "notes": "Waiting for response"
+                }
+                """;
+
+        mockMvc.perform(post("/api/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validation failed"))
+                .andExpect(jsonPath("$.message").value("Invalid request data"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors.vacancyId")
+                        .value("Vacancy id is required"));
+
+        verifyNoInteractions(applicationService, applicationMapper);
+    }
+}
