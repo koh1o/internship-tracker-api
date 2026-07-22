@@ -6,6 +6,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateReq
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
@@ -333,5 +334,70 @@ class ApplicationServiceTest {
 
         verify(applicationRepository).findById(applicationId);
         verify(applicationRepository, never()).delete(any(Application.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNextContactAtIsBeforeAppliedAtOnCreate() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 7, 20, 10, 0);
+        LocalDateTime nextContactAt =
+                LocalDateTime.of(2026, 7, 19, 10, 0);
+
+        ApplicationRequest request = new ApplicationRequest(
+                20L,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                nextContactAt,
+                "Notes"
+        );
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.createApplication(request)
+        );
+
+        assertEquals(
+                "Next contact date must not be before applied date",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(
+                vacancyRepository,
+                applicationRepository,
+                applicationMapper
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNextContactAtIsBeforeAppliedAtOnUpdate() {
+        Long applicationId = 30L;
+
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 7, 20, 10, 0);
+        LocalDateTime nextContactAt =
+                LocalDateTime.of(2026, 7, 19, 10, 0);
+
+        ApplicationUpdateRequest request = new ApplicationUpdateRequest(
+                20L,
+                appliedAt,
+                nextContactAt,
+                "Updated notes"
+        );
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.updateApplication(applicationId, request)
+        );
+
+        assertEquals(
+                "Next contact date must not be before applied date",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(
+                vacancyRepository,
+                applicationRepository,
+                applicationMapper
+        );
     }
 }

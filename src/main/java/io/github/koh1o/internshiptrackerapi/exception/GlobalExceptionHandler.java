@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.LinkedHashMap;
@@ -57,5 +58,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(response);
+    }
+
+    @ExceptionHandler(InvalidApplicationDataException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidApplicationDataException(
+            InvalidApplicationDataException exception,
+            HttpServletRequest request
+    ) {
+        return new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad request",
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
     }
 }

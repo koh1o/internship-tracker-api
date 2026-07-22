@@ -5,12 +5,14 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpd
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -31,6 +33,7 @@ public class ApplicationService {
     }
 
     public Application createApplication(ApplicationRequest request) {
+        validateDates(request.appliedAt(), request.nextContactAt());
         Vacancy vacancy = vacancyRepository.findById(request.vacancyId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Vacancy not found with id: " + request.vacancyId()
@@ -59,6 +62,7 @@ public class ApplicationService {
             Long id,
             ApplicationUpdateRequest request
     ) {
+        validateDates(request.appliedAt(), request.nextContactAt());
         Application application = applicationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Application not found with id: " + id
@@ -94,5 +98,18 @@ public class ApplicationService {
     public void deleteApplication(Long id) {
         Application application = getApplicationById(id);
         applicationRepository.delete(application);
+    }
+
+    private void validateDates(
+            LocalDateTime appliedAt,
+            LocalDateTime nextContactAt
+    ) {
+        if (appliedAt != null
+                && nextContactAt != null
+                && nextContactAt.isBefore(appliedAt)) {
+            throw new InvalidApplicationDataException(
+                    "Next contact date must not be before applied date"
+            );
+        }
     }
 }

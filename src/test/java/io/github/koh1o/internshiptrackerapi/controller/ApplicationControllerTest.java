@@ -6,6 +6,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpd
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
@@ -466,10 +467,10 @@ class ApplicationControllerTest {
         Long applicationId = 30L;
 
         String requestBody = """
-            {
-              "status": null
-            }
-            """;
+                {
+                  "status": null
+                }
+                """;
 
         mockMvc.perform(patch(
                         "/api/applications/{id}/status",
@@ -522,6 +523,77 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.fieldErrors").isEmpty());
 
         verify(applicationService).deleteApplication(applicationId);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenDatesAreInvalidOnCreate() throws Exception {
+        ApplicationRequest request = new ApplicationRequest(
+                20L,
+                ApplicationStatus.APPLIED,
+                LocalDateTime.of(2026, 7, 20, 10, 0),
+                LocalDateTime.of(2026, 7, 19, 10, 0),
+                "Notes"
+        );
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Next contact date must not be before applied date"
+                );
+
+        when(applicationService.createApplication(request))
+                .thenThrow(exception);
+
+        mockMvc.perform(post("/api/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Next contact date must not be before applied date"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).createApplication(request);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenDatesAreInvalidOnUpdate() throws Exception {
+        Long applicationId = 30L;
+
+        ApplicationUpdateRequest request = new ApplicationUpdateRequest(
+                20L,
+                LocalDateTime.of(2026, 7, 20, 10, 0),
+                LocalDateTime.of(2026, 7, 19, 10, 0),
+                "Updated notes"
+        );
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Next contact date must not be before applied date"
+                );
+
+        when(applicationService.updateApplication(applicationId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(put("/api/applications/{id}", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Next contact date must not be before applied date"))
+                .andExpect(jsonPath("$.path").value("/api/applications/30"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).updateApplication(applicationId, request);
         verifyNoInteractions(applicationMapper);
     }
 }
