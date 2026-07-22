@@ -302,4 +302,36 @@ class ApplicationServiceTest {
         verify(applicationRepository).findById(applicationId);
         verify(applicationRepository, never()).save(any(Application.class));
     }
+
+    @Test
+    void shouldDeleteApplication() {
+        Long applicationId = 30L;
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+
+        applicationService.deleteApplication(applicationId);
+
+        verify(applicationRepository).findById(applicationId);
+        verify(applicationRepository).delete(application);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingMissingApplication() {
+        Long applicationId = 999L;
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.deleteApplication(applicationId)
+        );
+
+        assertEquals("Application not found with id: 999", exception.getMessage());
+
+        verify(applicationRepository).findById(applicationId);
+        verify(applicationRepository, never()).delete(any(Application.class));
+    }
 }

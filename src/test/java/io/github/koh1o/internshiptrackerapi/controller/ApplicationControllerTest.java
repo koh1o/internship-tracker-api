@@ -20,10 +20,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -483,5 +485,43 @@ class ApplicationControllerTest {
                         .value("Status is required"));
 
         verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldDeleteApplication() throws Exception {
+        Long applicationId = 30L;
+
+        mockMvc.perform(delete("/api/applications/{id}", applicationId))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(applicationService).deleteApplication(applicationId);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingMissingApplication() throws Exception {
+        Long applicationId = 999L;
+
+        ResourceNotFoundException exception = new ResourceNotFoundException(
+                "Application not found with id: 999"
+        );
+
+        doThrow(exception)
+                .when(applicationService)
+                .deleteApplication(applicationId);
+
+        mockMvc.perform(delete("/api/applications/{id}", applicationId))
+                .andExpect(status().isNotFound())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Application not found with id: 999"))
+                .andExpect(jsonPath("$.path").value("/api/applications/999"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).deleteApplication(applicationId);
+        verifyNoInteractions(applicationMapper);
     }
 }

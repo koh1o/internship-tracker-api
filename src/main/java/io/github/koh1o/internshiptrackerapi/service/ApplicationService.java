@@ -90,4 +90,9 @@ public class ApplicationService {
 
         return savedApplication;
     }
+
+    public void deleteApplication(Long id) {
+        Application application = getApplicationById(id);
+        applicationRepository.delete(application);
+    }
 }

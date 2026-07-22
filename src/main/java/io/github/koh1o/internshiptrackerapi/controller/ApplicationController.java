@@ -9,6 +9,7 @@ import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -90,5 +91,11 @@ public class ApplicationController {
         ApplicationResponse response = applicationMapper.toResponse(application);
 
         return response;
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteApplication(@PathVariable Long id) {
+        applicationService.deleteApplication(id);
     }
 }
