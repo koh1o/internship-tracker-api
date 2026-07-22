@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
@@ -69,6 +70,22 @@ public class ApplicationService {
                 ));
 
         applicationMapper.updateEntity(application, request, vacancy);
+        Application savedApplication = applicationRepository.save(application);
+
+        return savedApplication;
+    }
+
+    public Application updateApplicationStatus(
+            Long id,
+            ApplicationStatusUpdateRequest request
+    ) {
+        Application application = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Application not found with id: " + id
+                ));
+
+        application.setStatus(request.status());
+
         Application savedApplication = applicationRepository.save(application);
 
         return savedApplication;

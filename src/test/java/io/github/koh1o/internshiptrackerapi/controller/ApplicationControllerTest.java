@@ -1,14 +1,15 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
-import tools.jackson.databind.ObjectMapper;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -377,5 +379,109 @@ class ApplicationControllerTest {
 
         verify(applicationService).updateApplication(applicationId, request);
         verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldUpdateApplicationStatus() throws Exception {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Application updatedApplication = mock(Application.class);
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.INTERVIEW,
+                LocalDateTime.of(2026, 7, 2, 11, 0),
+                LocalDateTime.of(2026, 7, 10, 12, 0),
+                "Updated notes",
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                LocalDateTime.of(2026, 7, 2, 11, 5)
+        );
+
+        when(applicationService.updateApplicationStatus(applicationId, request))
+                .thenReturn(updatedApplication);
+        when(applicationMapper.toResponse(updatedApplication))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/api/applications/{id}/status", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(30L))
+                .andExpect(jsonPath("$.status").value("INTERVIEW"));
+
+        verify(applicationService).updateApplicationStatus(applicationId, request);
+        verify(applicationMapper).toResponse(updatedApplication);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingStatusOfMissingApplication()
+            throws Exception {
+
+        Long applicationId = 999L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        ResourceNotFoundException exception =
+                new ResourceNotFoundException(
+                        "Application not found with id: " + applicationId
+                );
+
+        when(applicationService.updateApplicationStatus(applicationId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(patch("/api/applications/{id}/status", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message")
+                        .value("Application not found with id: 999"))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/applications/999/status"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).updateApplicationStatus(applicationId, request);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenStatusIsMissing() throws Exception {
+        Long applicationId = 30L;
+
+        String requestBody = """
+            {
+              "status": null
+            }
+            """;
+
+        mockMvc.perform(patch(
+                        "/api/applications/{id}/status",
+                        applicationId
+                )
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.fieldErrors.status")
+                        .value("Status is required"));
+
+        verifyNoInteractions(applicationService, applicationMapper);
     }
 }

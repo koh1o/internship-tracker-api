@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
@@ -250,6 +251,55 @@ class ApplicationServiceTest {
         verify(applicationRepository).findById(applicationId);
         verify(vacancyRepository).findById(vacancyId);
         verifyNoInteractions(applicationMapper);
+        verify(applicationRepository, never()).save(any(Application.class));
+    }
+
+    @Test
+    void shouldUpdateApplicationStatus() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Application application = mock(Application.class);
+        Application savedApplication = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(applicationRepository.save(application))
+                .thenReturn(savedApplication);
+
+        Application result = applicationService.updateApplicationStatus(applicationId, request);
+
+        assertSame(savedApplication, result);
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).setStatus(ApplicationStatus.INTERVIEW);
+        verify(applicationRepository).save(application);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingStatusOfMissingApplication() {
+        Long applicationId = 999L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> applicationService.updateApplicationStatus(applicationId, request)
+        );
+
+        assertEquals("Application not found with id: 999", exception.getMessage());
+
+        verify(applicationRepository).findById(applicationId);
         verify(applicationRepository, never()).save(any(Application.class));
     }
 }

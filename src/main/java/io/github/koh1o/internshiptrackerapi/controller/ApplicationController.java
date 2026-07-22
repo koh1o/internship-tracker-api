@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.controller;
 
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
@@ -9,6 +10,7 @@ import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -72,6 +74,18 @@ public class ApplicationController {
             @Valid @RequestBody ApplicationUpdateRequest request
     ) {
         Application application = applicationService.updateApplication(id, request);
+
+        ApplicationResponse response = applicationMapper.toResponse(application);
+
+        return response;
+    }
+
+    @PatchMapping("/{id}/status")
+    public ApplicationResponse updateApplicationStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody ApplicationStatusUpdateRequest request
+    ) {
+        Application application = applicationService.updateApplicationStatus(id, request);
 
         ApplicationResponse response = applicationMapper.toResponse(application);
 
