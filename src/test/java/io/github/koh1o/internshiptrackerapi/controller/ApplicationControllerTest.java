@@ -596,4 +596,39 @@ class ApplicationControllerTest {
         verify(applicationService).updateApplication(applicationId, request);
         verifyNoInteractions(applicationMapper);
     }
+
+    @Test
+    void shouldReturnBadRequestWhenChangingTerminalStatus() throws Exception {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Cannot change status from REJECTED to INTERVIEW"
+                );
+
+        when(applicationService.updateApplicationStatus(applicationId, request))
+                .thenThrow(exception);
+
+        mockMvc.perform(patch("/api/applications/{id}/status", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Cannot change status from REJECTED to INTERVIEW"))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/applications/30/status"))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).updateApplicationStatus(applicationId, request);
+        verifyNoInteractions(applicationMapper);
+    }
 }

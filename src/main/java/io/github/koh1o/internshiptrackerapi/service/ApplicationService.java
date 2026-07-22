@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
+import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
 import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
@@ -88,6 +89,11 @@ public class ApplicationService {
                         "Application not found with id: " + id
                 ));
 
+        validateStatusTransition(
+                application.getStatus(),
+                request.status()
+        );
+
         application.setStatus(request.status());
 
         Application savedApplication = applicationRepository.save(application);
@@ -109,6 +115,22 @@ public class ApplicationService {
                 && nextContactAt.isBefore(appliedAt)) {
             throw new InvalidApplicationDataException(
                     "Next contact date must not be before applied date"
+            );
+        }
+    }
+
+    private void validateStatusTransition(
+            ApplicationStatus currentStatus,
+            ApplicationStatus newStatus
+    ) {
+        if (currentStatus == ApplicationStatus.OFFER
+                || currentStatus == ApplicationStatus.REJECTED
+                || currentStatus == ApplicationStatus.WITHDRAWN) {
+            throw new InvalidApplicationDataException(
+                    "Cannot change status from "
+                            + currentStatus
+                            + " to "
+                            + newStatus
             );
         }
     }

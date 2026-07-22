@@ -271,11 +271,14 @@ class ApplicationServiceTest {
                 .thenReturn(Optional.of(application));
         when(applicationRepository.save(application))
                 .thenReturn(savedApplication);
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.APPLIED);
 
         Application result = applicationService.updateApplicationStatus(applicationId, request);
 
         assertSame(savedApplication, result);
 
+        verify(application).getStatus();
         verify(applicationRepository).findById(applicationId);
         verify(application).setStatus(ApplicationStatus.INTERVIEW);
         verify(applicationRepository).save(application);
@@ -399,5 +402,39 @@ class ApplicationServiceTest {
                 applicationRepository,
                 applicationMapper
         );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenChangingTerminalStatus() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.REJECTED);
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.updateApplicationStatus(applicationId, request)
+        );
+
+        assertEquals(
+                "Cannot change status from REJECTED to INTERVIEW",
+                exception.getMessage()
+        );
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(application, never())
+                .setStatus(any(ApplicationStatus.class));
+        verify(applicationRepository, never())
+                .save(any(Application.class));
     }
 }
