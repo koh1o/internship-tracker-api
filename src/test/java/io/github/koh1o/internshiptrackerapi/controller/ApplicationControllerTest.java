@@ -631,4 +631,46 @@ class ApplicationControllerTest {
         verify(applicationService).updateApplicationStatus(applicationId, request);
         verifyNoInteractions(applicationMapper);
     }
+
+    @Test
+    void shouldReturnCurrentApplicationWhenStatusDoesNotChange() throws Exception {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.REJECTED
+                );
+
+        Application application = mock(Application.class);
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.REJECTED,
+                LocalDateTime.of(2026, 7, 2, 11, 0),
+                LocalDateTime.of(2026, 7, 10, 12, 0),
+                "Notes",
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                LocalDateTime.of(2026, 7, 2, 11, 5)
+        );
+
+        when(applicationService.updateApplicationStatus(applicationId, request))
+                .thenReturn(application);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/api/applications/{id}/status", applicationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(30L))
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+        verify(applicationService).updateApplicationStatus(applicationId, request);
+        verify(applicationMapper).toResponse(application);
+    }
 }

@@ -437,4 +437,30 @@ class ApplicationServiceTest {
         verify(applicationRepository, never())
                 .save(any(Application.class));
     }
+
+    @Test
+    void shouldReturnApplicationWithoutSavingWhenStatusDoesNotChange() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.REJECTED
+                );
+
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.REJECTED);
+
+        Application result = applicationService.updateApplicationStatus(applicationId, request);
+
+        assertSame(application, result);
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(application, never()).setStatus(any(ApplicationStatus.class));
+        verify(applicationRepository, never()).save(any(Application.class));
+    }
 }

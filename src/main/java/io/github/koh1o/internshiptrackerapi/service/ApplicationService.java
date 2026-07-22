@@ -89,8 +89,14 @@ public class ApplicationService {
                         "Application not found with id: " + id
                 ));
 
+        ApplicationStatus currentStatus = application.getStatus();
+
+        if (currentStatus == request.status()) {
+            return application;
+        }
+
         validateStatusTransition(
-                application.getStatus(),
+                currentStatus,
                 request.status()
         );
 
