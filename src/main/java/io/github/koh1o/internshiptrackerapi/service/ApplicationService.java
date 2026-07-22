@@ -34,7 +34,14 @@ public class ApplicationService {
     }
 
     public Application createApplication(ApplicationRequest request) {
-        validateDates(request.appliedAt(), request.nextContactAt());
+        validateDates(
+                request.appliedAt(),
+                request.nextContactAt()
+        );
+        validateAppliedAtForStatus(
+                request.status(),
+                request.appliedAt()
+        );
         Vacancy vacancy = vacancyRepository.findById(request.vacancyId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Vacancy not found with id: " + request.vacancyId()
@@ -69,6 +76,11 @@ public class ApplicationService {
                         "Application not found with id: " + id
                 ));
 
+        validateAppliedAtForStatus(
+                application.getStatus(),
+                request.appliedAt()
+        );
+
         Vacancy vacancy = vacancyRepository.findById(request.vacancyId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Vacancy not found with id: " + request.vacancyId()
@@ -98,6 +110,11 @@ public class ApplicationService {
         validateStatusTransition(
                 currentStatus,
                 request.status()
+        );
+
+        validateAppliedAtForStatus(
+                request.status(),
+                application.getAppliedAt()
         );
 
         application.setStatus(request.status());
@@ -159,6 +176,17 @@ public class ApplicationService {
                             + currentStatus
                             + " to "
                             + newStatus
+            );
+        }
+    }
+
+    private void validateAppliedAtForStatus(
+            ApplicationStatus status,
+            LocalDateTime appliedAt
+    ) {
+        if (status != ApplicationStatus.PLANNED && appliedAt == null) {
+            throw new InvalidApplicationDataException(
+                    "Applied date is required for status " + status
             );
         }
     }

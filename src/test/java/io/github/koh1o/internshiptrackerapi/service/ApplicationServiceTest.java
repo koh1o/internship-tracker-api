@@ -223,19 +223,25 @@ class ApplicationServiceTest {
     void shouldThrowExceptionWhenUpdatingWithMissingVacancy() {
         Long applicationId = 30L;
         Long vacancyId = 888L;
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 7, 20, 10, 0);
 
         Application application = mock(Application.class);
 
         ApplicationUpdateRequest request =
                 new ApplicationUpdateRequest(
                         vacancyId,
-                        null,
+                        appliedAt,
                         null,
                         "Updated notes"
                 );
 
         when(applicationRepository.findById(applicationId))
                 .thenReturn(Optional.of(application));
+
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.APPLIED);
+
         when(vacancyRepository.findById(vacancyId))
                 .thenReturn(Optional.empty());
 
@@ -271,6 +277,8 @@ class ApplicationServiceTest {
                 .thenReturn(Optional.of(application));
         when(applicationRepository.save(application))
                 .thenReturn(savedApplication);
+        when(application.getAppliedAt())
+                .thenReturn(LocalDateTime.of(2026, 7, 20, 10, 0));
         when(application.getStatus())
                 .thenReturn(ApplicationStatus.APPLIED);
 
@@ -282,6 +290,7 @@ class ApplicationServiceTest {
         verify(applicationRepository).findById(applicationId);
         verify(application).setStatus(ApplicationStatus.INTERVIEW);
         verify(applicationRepository).save(application);
+        verify(application).getAppliedAt();
     }
 
     @Test
@@ -511,6 +520,8 @@ class ApplicationServiceTest {
 
         when(applicationRepository.findById(applicationId))
                 .thenReturn(Optional.of(application));
+        when(application.getAppliedAt())
+                .thenReturn(LocalDateTime.of(2026, 7, 20, 10, 0));
         when(application.getStatus())
                 .thenReturn(ApplicationStatus.APPLIED);
         when(applicationRepository.save(application))
@@ -524,5 +535,106 @@ class ApplicationServiceTest {
         verify(application).getStatus();
         verify(application).setStatus(ApplicationStatus.TEST_TASK);
         verify(applicationRepository).save(application);
+        verify(application).getAppliedAt();
+    }
+
+    @Test
+    void shouldThrowExceptionWhenAppliedAtIsMissingForAppliedStatusOnCreate() {
+        ApplicationRequest request = new ApplicationRequest(
+                20L,
+                ApplicationStatus.APPLIED,
+                null,
+                null,
+                "Notes"
+        );
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.createApplication(request)
+        );
+
+        assertEquals(
+                "Applied date is required for status APPLIED",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(
+                vacancyRepository,
+                applicationRepository,
+                applicationMapper
+        );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenAppliedAtIsRemovedFromAppliedApplication() {
+        Long applicationId = 30L;
+
+        ApplicationUpdateRequest request = new ApplicationUpdateRequest(
+                20L,
+                null,
+                null,
+                "Updated notes"
+        );
+
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.APPLIED);
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.updateApplication(applicationId, request)
+        );
+
+        assertEquals(
+                "Applied date is required for status APPLIED",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(vacancyRepository, applicationMapper);
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(applicationRepository, never()).save(any(Application.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenChangingToAppliedWithoutAppliedAt() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.APPLIED
+                );
+
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.PLANNED);
+        when(application.getAppliedAt())
+                .thenReturn(null);
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.updateApplicationStatus(applicationId, request)
+        );
+
+        assertEquals(
+                "Applied date is required for status APPLIED",
+                exception.getMessage()
+        );
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(application).getAppliedAt();
+
+        verify(application, never())
+                .setStatus(any(ApplicationStatus.class));
+
+        verify(applicationRepository, never())
+                .save(any(Application.class));
     }
 }
