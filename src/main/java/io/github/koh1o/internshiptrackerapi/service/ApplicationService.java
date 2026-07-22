@@ -129,9 +129,31 @@ public class ApplicationService {
             ApplicationStatus currentStatus,
             ApplicationStatus newStatus
     ) {
-        if (currentStatus == ApplicationStatus.OFFER
-                || currentStatus == ApplicationStatus.REJECTED
-                || currentStatus == ApplicationStatus.WITHDRAWN) {
+        boolean allowed = switch (currentStatus) {
+            case PLANNED ->
+                    newStatus == ApplicationStatus.APPLIED
+                            || newStatus == ApplicationStatus.WITHDRAWN;
+
+            case APPLIED ->
+                    newStatus == ApplicationStatus.TEST_TASK
+                            || newStatus == ApplicationStatus.INTERVIEW
+                            || newStatus == ApplicationStatus.REJECTED
+                            || newStatus == ApplicationStatus.WITHDRAWN;
+
+            case TEST_TASK ->
+                    newStatus == ApplicationStatus.INTERVIEW
+                            || newStatus == ApplicationStatus.REJECTED
+                            || newStatus == ApplicationStatus.WITHDRAWN;
+
+            case INTERVIEW ->
+                    newStatus == ApplicationStatus.OFFER
+                            || newStatus == ApplicationStatus.REJECTED
+                            || newStatus == ApplicationStatus.WITHDRAWN;
+
+            case OFFER, REJECTED, WITHDRAWN -> false;
+        };
+
+        if (!allowed) {
             throw new InvalidApplicationDataException(
                     "Cannot change status from "
                             + currentStatus

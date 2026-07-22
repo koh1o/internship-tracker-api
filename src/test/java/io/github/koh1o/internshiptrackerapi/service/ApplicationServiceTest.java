@@ -405,7 +405,7 @@ class ApplicationServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenChangingTerminalStatus() {
+    void shouldThrowExceptionWhenStatusTransitionIsNotAllowed() {
         Long applicationId = 30L;
 
         ApplicationStatusUpdateRequest request =
@@ -462,5 +462,67 @@ class ApplicationServiceTest {
         verify(application).getStatus();
         verify(application, never()).setStatus(any(ApplicationStatus.class));
         verify(applicationRepository, never()).save(any(Application.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransitionFromPlannedToInterview() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Application application = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.PLANNED);
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.updateApplicationStatus(applicationId, request)
+        );
+
+        assertEquals(
+                "Cannot change status from PLANNED to INTERVIEW",
+                exception.getMessage()
+        );
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(application, never())
+                .setStatus(any(ApplicationStatus.class));
+        verify(applicationRepository, never()).save(any(Application.class));
+    }
+
+    @Test
+    void shouldUpdateStatusFromAppliedToTestTask() {
+        Long applicationId = 30L;
+
+        ApplicationStatusUpdateRequest request =
+                new ApplicationStatusUpdateRequest(
+                        ApplicationStatus.TEST_TASK
+                );
+
+        Application application = mock(Application.class);
+        Application savedApplication = mock(Application.class);
+
+        when(applicationRepository.findById(applicationId))
+                .thenReturn(Optional.of(application));
+        when(application.getStatus())
+                .thenReturn(ApplicationStatus.APPLIED);
+        when(applicationRepository.save(application))
+                .thenReturn(savedApplication);
+
+        Application result = applicationService.updateApplicationStatus(applicationId, request);
+
+        assertSame(savedApplication, result);
+
+        verify(applicationRepository).findById(applicationId);
+        verify(application).getStatus();
+        verify(application).setStatus(ApplicationStatus.TEST_TASK);
+        verify(applicationRepository).save(application);
     }
 }
