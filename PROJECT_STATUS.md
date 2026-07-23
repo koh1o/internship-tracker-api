@@ -2,27 +2,50 @@
 
 ## Актуальность файла
 
-Последнее обновление: **2026-07-22**.
+Последнее обновление: **2026-07-23**.
 
-Это актуальная стабильная точка проекта после завершения CRUD для `Application`, отдельного изменения статуса и основных бизнес-правил дат и переходов статусов.
+Это актуальная стабильная точка проекта после завершения пагинации списка `Application`.
 
-В источниках проекта должен находиться только один файл с названием `PROJECT_STATUS.md`.
+В источниках проекта должен находиться только один файл с точным названием:
+
+```text
+PROJECT_STATUS.md
+```
+
+Название файла нельзя изменять.
 
 ---
 
 ## Текущий этап
 
-Завершён основной модуль `Application`.
+Для `Company`, `Vacancy` и `Application` завершён основной CRUD.
 
-Для `Company`, `Vacancy` и `Application` реализован CRUD. Для `Application` дополнительно готовы отдельная операция изменения статуса, проверки согласованности дат и явные правила переходов статусов.
+Для `Application` дополнительно реализованы:
 
-Следующий крупный этап:
+- отдельная операция изменения статуса;
+- проверки согласованности дат;
+- явные правила переходов статусов;
+- идемпотентная повторная установка текущего статуса;
+- пагинация списка;
+- собственный DTO для paged response;
+- проверка параметров `page` и `size`;
+- единый формат ошибок для method validation.
+
+Текущий крупный этап:
 
 ```text
 Фильтрация, сортировка и пагинация
 ```
 
-Начинать рекомендуется с пагинации списка `Application`, затем добавить сортировку и фильтры по статусу, компании, формату работы и датам.
+Пагинация `Application` завершена.
+
+Следующая часть этапа:
+
+```text
+Сортировка списка Application
+```
+
+После сортировки нужно перейти к фильтрации.
 
 ---
 
@@ -31,10 +54,16 @@
 Последний рабочий code-коммит:
 
 ```text
-6a882b5 Validate applied date for Application status
+4bbbd31 Add Application pagination
 ```
 
-Последние завершённые коммиты:
+Последний documentation-коммит до обновления этого файла:
+
+```text
+8cef1e5 Update project status after Application business rules
+```
+
+Последние завершённые code-коммиты:
 
 ```text
 985bdf3 Add Application status update endpoint
@@ -44,6 +73,7 @@ aa61b8f Add Application delete endpoint
 7c83dfc Handle unchanged Application status
 a76960f Add Application status transition rules
 6a882b5 Validate applied date for Application status
+4bbbd31 Add Application pagination
 ```
 
 Состояние Git после отправки последнего code-коммита:
@@ -55,18 +85,21 @@ Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
 
-Всего в проекте **94 теста**.
+Всего в проекте **99 тестов**.
 
 Последний полный запуск:
 
 ```text
-Tests run: 94
+Tests run: 99
 Failures: 0
 Errors: 0
+Skipped: 0
 BUILD SUCCESS
 ```
 
-После редактирования этого файла локально будет изменён только `PROJECT_STATUS.md`. Его нужно закоммитить отдельно от Java-кода.
+После локальной замены этого файла должен быть изменён только `PROJECT_STATUS.md`.
+
+Изменение `PROJECT_STATUS.md` нужно закоммитить отдельно от Java-кода.
 
 ---
 
@@ -83,11 +116,11 @@ BUILD SUCCESS
 - [x] Настроен `.gitignore`.
 - [x] В Git не попадают `.idea/`, `target/`, реальные пароли и другие секреты.
 - [x] Пароль PostgreSQL передаётся через переменную окружения `DB_PASSWORD`.
-- [x] Перед коммитами проверяются тесты, `git status`, diff и staging.
 - [x] Для diff используется `git --no-pager diff`.
 - [x] Для staged diff используется `git --no-pager diff --cached`.
 - [x] Code-коммиты небольшие и осмысленные.
-- [x] Изменения `PROJECT_STATUS.md` не смешиваются с code-коммитами.
+- [x] Documentation-коммиты не смешиваются с Java-кодом.
+- [x] Последний code-коммит отправлен на GitHub.
 
 ### Spring Boot и PostgreSQL
 
@@ -128,12 +161,13 @@ DELETE /api/companies/{id}
 
 Для `Vacancy` завершён полный CRUD:
 
-- [x] Enum `WorkFormat`: `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
+- [x] Enum `WorkFormat`.
+- [x] Значения `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
 - [x] Entity `Vacancy`.
 - [x] Связь `Many-to-One` с `Company` через `company_id`.
-- [x] `FetchType.LAZY`.
+- [x] Используется `FetchType.LAZY`.
 - [x] Enum хранится через `EnumType.STRING`.
-- [x] Правило `null workFormat → NOT_SPECIFIED`.
+- [x] Реализовано правило `null workFormat → NOT_SPECIFIED`.
 - [x] Repository и repository-тест.
 - [x] Request/response DTO и Bean Validation.
 - [x] Ручной Mapper и mapper-тесты.
@@ -154,38 +188,44 @@ DELETE /api/vacancies/{id}
 
 ### Application
 
-Для `Application` завершены CRUD и основные бизнес-операции:
+Для `Application` завершены CRUD, основные бизнес-правила и пагинация:
 
 - [x] Enum `ApplicationStatus`.
 - [x] Статусы `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
 - [x] Entity `Application`.
 - [x] Связь `Many-to-One` с `Vacancy` через `vacancy_id`.
-- [x] `FetchType.LAZY`.
+- [x] Используется `FetchType.LAZY`.
 - [x] Статус хранится через `EnumType.STRING`.
 - [x] Поля `appliedAt`, `nextContactAt`, `notes`.
 - [x] Ограничение `notes` до 2000 символов.
 - [x] Repository и repository-тест.
-- [x] `ApplicationRequest`, `ApplicationUpdateRequest`, `ApplicationStatusUpdateRequest`, `ApplicationResponse`.
+- [x] `ApplicationRequest`.
+- [x] `ApplicationUpdateRequest`.
+- [x] `ApplicationStatusUpdateRequest`.
+- [x] `ApplicationResponse`.
 - [x] Ручной `ApplicationMapper` и mapper-тесты.
 - [x] Service и unit-тесты.
 - [x] Controller и `MockMvc`-тесты.
-- [x] Создание.
-- [x] Получение списка.
-- [x] Получение по `id`.
-- [x] Обновление Vacancy, дат и заметок.
-- [x] Удаление.
+- [x] Создание, получение, обновление и удаление.
 - [x] Отдельное изменение статуса через `PATCH`.
 - [x] Статус не изменяется через обычный `PUT`.
 - [x] Идемпотентная повторная установка того же статуса без лишнего `save()`.
-- [x] `404 Not Found` для отсутствующего Application.
-- [x] `404 Not Found` для отсутствующей Vacancy при создании и обновлении.
-- [x] Единый `400 Bad Request` для ошибок бизнес-валидации.
+- [x] Проверки дат и переходов статусов.
+- [x] Единый `400 Bad Request` для бизнес-ошибок.
+- [x] Пагинация через `Page`, `Pageable` и `PageRequest`.
+- [x] Собственный generic record `PagedResponse<T>`.
+- [x] Entity не возвращаются в paged response.
+- [x] Элементы страницы преобразуются в `ApplicationResponse`.
+- [x] Значения пагинации по умолчанию.
+- [x] Проверка границ `page` и `size`.
+- [x] Единый `ErrorResponse` для method validation.
+- [x] Пустая страница за пределами данных возвращается с `200 OK`.
 
 Endpoint:
 
 ```text
 POST   /api/applications
-GET    /api/applications
+GET    /api/applications?page=0&size=10
 GET    /api/applications/{id}
 PUT    /api/applications/{id}
 PATCH  /api/applications/{id}/status
@@ -199,12 +239,12 @@ DELETE /api/applications/{id}
 ### Согласованность дат
 
 - `nextContactAt` не может быть раньше `appliedAt`.
-- Одинаковые значения `appliedAt` и `nextContactAt` разрешены.
-- Если одна из дат отсутствует, проверка порядка дат не нарушается.
+- Одинаковые значения дат разрешены.
+- Если одна из дат отсутствует, порядок дат не нарушается.
 - Для любого статуса, кроме `PLANNED`, поле `appliedAt` обязательно.
 - `PLANNED` может существовать без `appliedAt`.
-- Нельзя удалить `appliedAt` через `PUT`, если текущий статус уже не `PLANNED`.
-- Нельзя перейти из `PLANNED` в активный статус, если `appliedAt` не заполнен.
+- Через `PUT` нельзя удалить `appliedAt`, если текущий статус не `PLANNED`.
+- Нельзя перейти из `PLANNED` в активный статус без `appliedAt`.
 
 Сообщения ошибок:
 
@@ -217,8 +257,6 @@ Applied date is required for status APPLIED
 
 ### Переходы статусов
 
-Разрешённые переходы:
-
 ```text
 PLANNED   → APPLIED, WITHDRAWN
 APPLIED   → TEST_TASK, INTERVIEW, REJECTED, WITHDRAWN
@@ -229,19 +267,134 @@ REJECTED  → нет переходов
 WITHDRAWN → нет переходов
 ```
 
-Повторная установка текущего статуса разрешена:
+Повторная установка текущего статуса разрешена.
 
-```text
-REJECTED → REJECTED
-```
+При повторной установке Service:
 
-В этом случае Service возвращает текущий `Application`, не вызывает `setStatus()` и не выполняет лишний `save()`.
+- возвращает текущий `Application`;
+- не вызывает `setStatus()`;
+- не вызывает `save()`.
 
-Запрещённый переход возвращает бизнес-ошибку вида:
+Запрещённый переход возвращает сообщение вида:
 
 ```text
 Cannot change status from PLANNED to INTERVIEW
 ```
+
+Правила переходов находятся в `ApplicationService` и реализованы через исчерпывающий `switch expression`.
+
+---
+
+## Пагинация Application
+
+### HTTP-контракт
+
+```text
+GET /api/applications?page=0&size=10
+```
+
+Query-параметры:
+
+```text
+page — номер страницы, начиная с 0
+size — максимальное количество элементов на странице
+```
+
+Значения по умолчанию:
+
+```text
+page=0
+size=10
+```
+
+Ограничения:
+
+```text
+page >= 0
+1 <= size <= 100
+```
+
+### Формат ответа
+
+Controller возвращает:
+
+```java
+PagedResponse<ApplicationResponse>
+```
+
+Поля:
+
+```text
+content
+page
+size
+totalElements
+totalPages
+```
+
+Пример:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 10,
+  "totalElements": 0,
+  "totalPages": 0
+}
+```
+
+### Поток выполнения
+
+```text
+ApplicationController
+→ ApplicationService.getAllApplications(page, size)
+→ PageRequest.of(page, size)
+→ ApplicationRepository.findAll(pageable)
+→ Page<Application>
+→ ApplicationMapper.toResponse(...)
+→ PagedResponse<ApplicationResponse>
+```
+
+Правила:
+
+- Spring `Page<Application>` не возвращается клиенту напрямую.
+- `Application` Entity не возвращается клиенту.
+- Mapper преобразует один `Application`.
+- Service организует преобразование элементов всей страницы.
+- Controller получает готовый `PagedResponse<ApplicationResponse>`.
+- Controller не выполняет маппинг страницы.
+- Страница за пределами данных возвращает пустой `content`, а не `404`.
+
+### Валидация параметров
+
+На параметрах Controller используются:
+
+```java
+@Min(0)
+int page
+
+@Min(1)
+@Max(100)
+int size
+```
+
+Нарушение ограничения вызывает:
+
+```text
+HandlerMethodValidationException
+```
+
+`GlobalExceptionHandler` преобразует его в единый `ErrorResponse`.
+
+Проверены сценарии:
+
+- обычная непустая страница;
+- пустая страница;
+- параметры по умолчанию;
+- `page=-1`;
+- `size=0`;
+- `size=101`.
 
 ---
 
@@ -252,63 +405,63 @@ Cannot change status from PLANNED to INTERVIEW
 - принимает `ApplicationRequest`;
 - возвращает `ApplicationResponse`;
 - успешный статус: `201 Created`;
-- Vacancy ищется по `vacancyId`;
 - при отсутствии Vacancy возвращается `404 Not Found`;
-- проверяются порядок дат и соответствие `status`/`appliedAt`.
+- проверяет даты и соответствие `status`/`appliedAt`.
 
 ### GET /api/applications
 
-- возвращает `List<ApplicationResponse>`;
+- принимает `page` и `size`;
+- возвращает `PagedResponse<ApplicationResponse>`;
 - успешный статус: `200 OK`;
-- пустая база возвращает пустой список;
-- пагинация, сортировка и фильтрация пока не добавлены.
+- значения по умолчанию: `page=0`, `size=10`;
+- `page >= 0`;
+- `1 <= size <= 100`;
+- пустая база возвращает пустой `content`;
+- страница за пределами данных возвращает пустой `content`;
+- сортировка и фильтрация пока не добавлены.
 
 ### GET /api/applications/{id}
 
 - возвращает `ApplicationResponse`;
 - успешный статус: `200 OK`;
-- при отсутствии Application возвращается `404 Not Found`.
+- отсутствующий Application возвращает `404 Not Found`.
 
 ### PUT /api/applications/{id}
 
 - принимает `ApplicationUpdateRequest`;
-- обновляет Vacancy, `appliedAt`, `nextContactAt`, `notes`;
+- обновляет Vacancy, даты и заметки;
 - не изменяет `status`;
 - возвращает `ApplicationResponse`;
 - успешный статус: `200 OK`;
-- проверяет порядок дат;
-- запрещает удалить `appliedAt` у Application с активным или финальным статусом;
-- при отсутствии Application или Vacancy возвращается `404 Not Found`.
+- проверяет бизнес-правила дат;
+- отсутствующий Application или Vacancy возвращает `404 Not Found`.
 
 ### PATCH /api/applications/{id}/status
 
 - принимает `ApplicationStatusUpdateRequest`;
 - изменяет только `status`;
 - успешный статус: `200 OK`;
-- проверяет существование Application;
-- повтор текущего статуса считается идемпотентным;
-- проверяет таблицу разрешённых переходов;
-- проверяет наличие `appliedAt` для нового статуса;
-- при бизнес-ошибке возвращается `400 Bad Request`.
+- повтор текущего статуса идемпотентен;
+- проверяет разрешённые переходы;
+- проверяет наличие `appliedAt`;
+- бизнес-ошибка возвращает `400 Bad Request`.
 
 ### DELETE /api/applications/{id}
 
 - удаляет Application;
 - успешный статус: `204 No Content`;
-- при отсутствии Application возвращается `404 Not Found`.
+- отсутствующий Application возвращает `404 Not Found`.
 
 ---
 
-## Архитектурные правила, которые уже применяются
-
-Поток запроса:
+## Архитектурные правила
 
 ```text
 HTTP request → Controller → Service → Repository → PostgreSQL
 ```
 
 - Controller отвечает за HTTP-запросы и ответы.
-- Service отвечает за бизнес-логику.
+- Service содержит бизнес-логику и организует операции.
 - Repository отвечает за доступ к данным.
 - Entity описывает модель хранения.
 - DTO описывает внешний API-контракт.
@@ -316,13 +469,13 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Controller не обращается к Repository напрямую.
 - Mapper не обращается к Repository.
 - Entity не возвращаются клиенту напрямую.
+- Spring `Page` не возвращается клиенту напрямую.
 - Используется constructor injection.
 - Ошибки обрабатываются централизованно.
-- Маппинг пока пишется вручную, без MapStruct.
-- Изменение статуса выделено в отдельную бизнес-операцию.
-- Проверки переходов статусов и дат находятся в Service.
-- Repository не проверяется из Controller-тестов напрямую.
-- При ошибочных сценариях тестируется отсутствие лишних взаимодействий.
+- Маппинг пишется вручную.
+- Правила дат и переходов статусов находятся в Service.
+- При ошибочных сценариях проверяется отсутствие лишних взаимодействий.
+- Универсальные CRUD-классы пока не добавляются.
 
 ---
 
@@ -332,148 +485,197 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 - working tree и staging area;
 - `git status`, `git add`, `git commit`, `git push`;
-- отличие `git diff` от `git diff --cached`;
-- добавление в staging только нужных файлов;
-- проверка будущего коммита до `git commit`;
-- маленькие осмысленные коммиты;
-- отдельные code- и documentation-коммиты;
+- обычный и staged diff;
+- маленькие code-коммиты;
+- отдельные documentation-коммиты;
 - работа с untracked-файлами;
-- проверка отсутствия секретов.
+- проверка отсутствия секретов;
+- проверка чистого working tree после push.
 
 ### Java, Spring и архитектура
 
-- назначение Controller, Service, Repository, Entity, DTO, Mapper;
+- назначение Controller, Service, Repository, Entity, DTO и Mapper;
 - constructor injection;
-- `@RestController`, `@Service`, `@Component`;
-- `@Valid` и Bean Validation;
-- единая обработка `400 Bad Request` и `404 Not Found`;
-- различие HTTP-валидации и бизнес-валидации;
-- почему бизнес-логика находится в Service;
+- Bean Validation;
+- единая обработка `400` и `404`;
+- различие HTTP- и бизнес-валидации;
 - почему Entity не возвращаются напрямую;
-- различие request DTO и response DTO;
-- отдельный DTO и endpoint для изменения статуса;
-- переиспользование Service-методов без дублирования поиска;
-- идемпотентность повторной установки статуса;
-- сравнение enum через `==`;
-- `switch expression` для явных правил переходов.
+- request DTO и response DTO;
+- отдельная операция изменения статуса;
+- идемпотентность;
+- enum и `switch expression`;
+- назначение `PagedResponse<T>`;
+- почему Controller не возвращает `Page<Application>`;
+- почему размер страницы ограничен;
+- почему пустая страница не является `404`.
 
-### JPA
+### JPA и Spring Data
 
-- `@Entity`, `@Table`, `@Id`, `@GeneratedValue`;
-- `@Column`;
-- `@ManyToOne`, `@JoinColumn`, `FetchType.LAZY`;
+- основные JPA-аннотации;
+- `Many-to-One`, `FetchType.LAZY`;
 - `EnumType.STRING`;
-- `@PrePersist`, `@PreUpdate`;
 - `findById()`, `findAll()`, `save()`, `delete()`;
-- `Optional` и `orElseThrow()`.
+- `Optional` и `orElseThrow()`;
+- базовое назначение `Page`;
+- базовое назначение `Pageable`;
+- `PageRequest.of(page, size)`;
+- `getNumber()`, `getSize()`, `getTotalElements()`, `getTotalPages()`.
 
 ### Тестирование
 
 - Arrange, Act, Assert;
-- mock и поведение Mockito по умолчанию;
-- `when(...).thenReturn(...)`, `thenThrow(...)`, `doThrow(...)`;
-- `assertSame`, `assertEquals`, `assertThrows`;
-- `verify(...)`, `never()`, `verifyNoInteractions(...)`;
+- Mockito: `when`, `verify`, `never`, `verifyNoInteractions`;
 - Service unit-тесты;
 - mapper-тесты;
 - `@WebMvcTest` и `MockMvc`;
-- HTTP status, Content-Type, JSON body;
+- проверка HTTP status, Content-Type и JSON;
 - единый формат ошибок;
-- проверка отсутствия `save()`, Mapper и других лишних вызовов;
-- необходимость обновлять старые mock-данные после добавления новых бизнес-правил.
+- тестирование непустой и пустой страницы;
+- параметры по умолчанию;
+- границы `page` и `size`;
+- отсутствие вызова Service при ошибочной HTTP-валидации.
 
 ---
 
 ## Что понимается частично и требует повторения
 
-- различие unit-, controller-, repository- и будущих интеграционных тестов;
-- поведение LAZY-связей вне активной JPA-сессии;
-- транзакции и назначение `@Transactional`;
-- проектирование пагинации и формата paged response;
-- `Page`, `Pageable`, `PageRequest`, `Sort`;
+- различие unit-, controller-, repository- и интеграционных тестов;
+- LAZY-связи вне активной JPA-сессии;
+- транзакции и `@Transactional`;
+- различие `MethodArgumentNotValidException` и `HandlerMethodValidationException`;
+- внутреннее устройство `Page`, `Pageable` и `PageRequest`;
+- `Sort` и `Sort.Direction`;
+- объединение сортировки с `PageRequest`;
+- безопасный список разрешённых полей сортировки;
+- обработка неверного поля и направления;
 - фильтрация через derived query, JPQL или `Specification`;
-- управление схемой базы через Flyway вместо Hibernate DDL;
-- границы между проверками DTO, Service и ограничениями базы данных.
+- Flyway вместо Hibernate DDL;
+- границы между DTO validation, method validation, Service и базой данных.
 
 ---
 
-## Технический долг и ограничения текущей версии
+## Технический долг и ограничения
 
-- Нет пагинации, сортировки и фильтрации.
-- Схема пока не переведена на Flyway.
+- Пагинация реализована только для `Application`.
+- Для `Company` и `Vacancy` пагинация пока не добавлена.
+- Сортировка не реализована.
+- Фильтрация не реализована.
+- `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
+- Method validation возвращает первое найденное сообщение.
+- `fieldErrors` для query-параметров пока пустой.
+- Схема не переведена на Flyway.
 - Нет Swagger/OpenAPI.
 - Нет Dockerfile и `compose.yaml`.
 - Нет Testcontainers.
 - Нет `Interview`.
 - Нет User, Spring Security и JWT.
 - Нет GitHub Actions.
-- Нет финального README с архитектурой и примерами API.
+- Нет финального README.
 - Нет истории изменения статусов.
-- Дублирующиеся части CRUD пока не обобщаются намеренно.
-- `One-to-Many` коллекции не добавляются без практической необходимости.
-- MapStruct не добавляется, пока ручной маппинг остаётся понятным и небольшим.
+- CRUD-код намеренно не обобщается раньше времени.
+- `One-to-Many` коллекции не добавляются без необходимости.
+- MapStruct пока не используется.
 
 ---
 
 ## Следующее задание
 
-Начать этап фильтрации, сортировки и пагинации с пагинации списка `Application`:
+Начать сортировку списка `Application`.
+
+Предварительный HTTP-контракт:
 
 ```text
-GET /api/applications?page=0&size=10
+GET /api/applications?page=0&size=10&sortBy=createdAt&direction=desc
 ```
 
-Предварительный план:
+Рекомендуемая последовательность:
 
-1. Разобраться с `Page`, `Pageable` и `PageRequest`.
-2. Изменить Repository-вызов `findAll()` на пагинируемый вариант.
-3. Решить, возвращать ли Spring `Page` напрямую или создать собственный response DTO.
-4. Сначала реализовать Service и unit-тесты.
-5. Затем обновить Controller и `MockMvc`-тесты.
-6. Добавить ограничения для некорректных `page` и `size`.
-7. После пагинации добавить сортировку.
-8. После сортировки перейти к фильтрам.
+1. Разобраться с `Sort`.
+2. Разобраться с `Sort.Direction`.
+3. Понять, как сортировка передаётся в `PageRequest`.
+4. Выбрать разрешённые поля сортировки.
+5. Определить значения `sortBy` и `direction` по умолчанию.
+6. Сначала изменить Service и unit-тесты.
+7. Затем изменить Controller и `MockMvc`-тесты.
+8. Проверить `ASC` и `DESC`.
+9. Проверить неизвестное направление.
+10. Проверить неизвестное поле.
+11. Сделать отдельный code-коммит.
+12. После сортировки перейти к фильтрации.
 
-Пока не добавлять одновременно:
+Пока не добавлять:
 
-- сложные динамические фильтры;
-- `Specification` до понимания базовой пагинации;
+- фильтрацию;
+- `Specification`;
+- сложные динамические запросы;
 - Swagger;
 - Docker;
 - Spring Security;
-- frontend.
+- frontend;
+- универсальную сортировку для всех сущностей.
 
 ---
 
-## Вопросы для повторения перед продолжением
+## Критерии готовности сортировки
 
-1. Почему `ApplicationUpdateRequest` не содержит `status`?
-2. Чем `PUT /api/applications/{id}` отличается от `PATCH /api/applications/{id}/status`?
-3. Почему повтор того же статуса не вызывает `save()`?
-4. Где находятся правила допустимых переходов и почему?
-5. Почему `PLANNED` может существовать без `appliedAt`?
-6. Почему при обновлении данных статус берётся из Entity, а не из request?
-7. Что произойдёт при добавлении нового enum-статуса без обновления исчерпывающего `switch expression`?
-8. Зачем API нужна пагинация, даже если данных пока мало?
+Сортировка завершена, когда:
+
+- клиент может указать разрешённое поле;
+- клиент может выбрать `ASC` или `DESC`;
+- есть значения по умолчанию;
+- неверное поле не приводит к внутренней ошибке базы;
+- неверное направление возвращает управляемый `400 Bad Request`;
+- сортировка объединена с пагинацией;
+- Service покрыт unit-тестами;
+- Controller покрыт `MockMvc`-тестами;
+- все тесты проходят;
+- code-коммит отправлен на GitHub;
+- разработчик может объяснить `Sort` и его связь с `PageRequest`.
 
 ---
 
-## Рекомендуемый документационный коммит
+## Вопросы для повторения
 
-После замены файла и проверки diff:
+1. Чем `Page<Application>` отличается от `List<Application>`?
+2. Что описывает `Pageable`?
+3. Зачем нужен `PageRequest.of(page, size)`?
+4. Почему первая страница имеет номер `0`?
+5. Почему страница за пределами данных возвращает пустой `content`?
+6. Почему API возвращает `PagedResponse<ApplicationResponse>`?
+7. Где вызывается `ApplicationMapper` при пагинации?
+8. Чем `MethodArgumentNotValidException` отличается от `HandlerMethodValidationException`?
+9. Почему `size` ограничен значением `100`?
+10. Что означают `totalElements` и `totalPages`?
+11. Почему Controller-тест не проверяет Repository?
+12. Почему при неверных `page` или `size` Service не вызывается?
+13. Что должна описывать сортировка?
+14. Почему нельзя без проверки передавать любое поле в `Sort.by(...)`?
+
+---
+
+## Рекомендуемый documentation-коммит
+
+После замены файла проверь, что изменён только:
 
 ```text
-Update project status after Application business rules
+PROJECT_STATUS.md
 ```
 
-Проверки перед коммитом:
+Команды:
 
 ```powershell
 git status
 git --no-pager diff -- PROJECT_STATUS.md
 git add PROJECT_STATUS.md
 git --no-pager diff --cached
-git commit -m "Update project status after Application business rules"
+git status
+git commit -m "Update project status after Application pagination"
 git push
 git status
+```
+
+Рекомендуемое сообщение коммита:
+
+```text
+Update project status after Application pagination
 ```
