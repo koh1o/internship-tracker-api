@@ -53,45 +53,12 @@ public class ApplicationService {
             String sortBy,
             String direction
     ) {
-
-        if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
-            throw new InvalidApplicationDataException(
-                    "Unsupported sort field: " + sortBy
-            );
-        }
-
-        Sort.Direction sortDirection;
-
-        try {
-            sortDirection = Sort.Direction.fromString(direction);
-        } catch (IllegalArgumentException exception) {
-            throw new InvalidApplicationDataException(
-                    "Unsupported sort direction: " + direction
-            );
-        }
-
-        Sort sort = Sort.by(sortDirection, sortBy);
-
-        Pageable pageable = PageRequest.of(
+        return getAllApplications(
                 page,
                 size,
-                sort
-        );
-
-        Page<Application> applicationPage =
-                applicationRepository.findAll(pageable);
-
-        List<ApplicationResponse> content = applicationPage.getContent()
-                .stream()
-                .map(applicationMapper::toResponse)
-                .toList();
-
-        return new PagedResponse<>(
-                content,
-                applicationPage.getNumber(),
-                applicationPage.getSize(),
-                applicationPage.getTotalElements(),
-                applicationPage.getTotalPages()
+                sortBy,
+                direction,
+                null
         );
     }
 
@@ -259,5 +226,60 @@ public class ApplicationService {
                     "Applied date is required for status " + status
             );
         }
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationStatus status
+    ) {
+
+        if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            throw new InvalidApplicationDataException(
+                    "Unsupported sort field: " + sortBy
+            );
+        }
+
+        Sort.Direction sortDirection;
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidApplicationDataException(
+                    "Unsupported sort direction: " + direction
+            );
+        }
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Page<Application> applicationPage;
+
+        if (status == null) {
+            applicationPage = applicationRepository.findAll(pageable);
+        } else {
+            applicationPage = applicationRepository.findAllByStatus(
+                    status,
+                    pageable
+            );
+        }
+
+        List<ApplicationResponse> content = applicationPage.getContent()
+                .stream()
+                .map(applicationMapper::toResponse)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                applicationPage.getNumber(),
+                applicationPage.getSize(),
+                applicationPage.getTotalElements(),
+                applicationPage.getTotalPages()
+        );
     }
 }

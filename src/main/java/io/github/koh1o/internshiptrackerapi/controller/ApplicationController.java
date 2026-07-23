@@ -6,6 +6,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
+import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
@@ -62,13 +63,16 @@ public class ApplicationController {
 
             @RequestParam(defaultValue = "createdAt") String sortBy,
 
-            @RequestParam(defaultValue = "DESC") String direction
+            @RequestParam(defaultValue = "DESC") String direction,
+
+            @RequestParam(required = false) ApplicationStatus status
     ) {
         return applicationService.getAllApplications(
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                status
         );
     }
 

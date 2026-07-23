@@ -876,4 +876,66 @@ class ApplicationServiceTest {
 
         verifyNoInteractions(applicationRepository, applicationMapper);
     }
+
+    @Test
+    void shouldReturnApplicationsFilteredByStatus() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        ApplicationStatus status = ApplicationStatus.INTERVIEW;
+        long totalElements = 2;
+
+        Sort.Direction sortDirection = Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse = mock(ApplicationResponse.class);
+        ApplicationResponse secondResponse = mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        List<ApplicationResponse> expectedContent = List.of(
+                firstResponse,
+                secondResponse
+        );
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                applications,
+                pageable,
+                totalElements
+        );
+
+        when(applicationRepository.findAllByStatus(status, pageable))
+                .thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result = applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status
+        );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+
+        verify(applicationRepository).findAllByStatus(status, pageable);
+        verify(applicationRepository, never()).findAll(pageable);
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
 }

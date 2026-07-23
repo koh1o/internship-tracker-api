@@ -233,7 +233,8 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -259,7 +260,8 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -737,7 +739,8 @@ class ApplicationControllerTest {
                 defaultPage,
                 defaultSize,
                 defaultSortBy,
-                defaultDirection
+                defaultDirection,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications"))
@@ -754,7 +757,8 @@ class ApplicationControllerTest {
                 defaultPage,
                 defaultSize,
                 defaultSortBy,
-                defaultDirection
+                defaultDirection,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -838,7 +842,8 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         )).thenThrow(exception);
 
         mockMvc.perform(get("/api/applications")
@@ -860,7 +865,8 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -881,7 +887,8 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         )).thenThrow(exception);
 
         mockMvc.perform(get("/api/applications")
@@ -903,8 +910,98 @@ class ApplicationControllerTest {
                 page,
                 size,
                 sortBy,
-                direction
+                direction,
+                null
         );
         verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldGetApplicationsFilteredByStatus() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        ApplicationStatus status = ApplicationStatus.INTERVIEW;
+
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                20L,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.INTERVIEW,
+                LocalDateTime.of(2026, 7, 20, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Technical interview scheduled",
+                LocalDateTime.of(2026, 7, 20, 10, 5),
+                LocalDateTime.of(2026, 7, 22, 12, 0)
+        );
+
+        List<ApplicationResponse> content = List.of(response);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        content,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction)
+                        .param("status", status.name()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(response.id()))
+                .andExpect(jsonPath("$.content[0].status").value(status.name()))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size))
+                .andExpect(jsonPath("$.totalElements").value(totalElements))
+                .andExpect(jsonPath("$.totalPages").value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectUnsupportedApplicationStatus() throws Exception {
+        String status = "UNKNOWN";
+
+        mockMvc.perform(get("/api/applications")
+                        .param("status", status))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Unsupported value for parameter status: UNKNOWN"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verifyNoInteractions(applicationService, applicationMapper);
     }
 }
