@@ -4,7 +4,7 @@
 
 Последнее обновление: **2026-07-23**.
 
-Это актуальная стабильная точка проекта после завершения пагинации и сортировки списка `Application`.
+Это актуальная стабильная точка проекта после завершения пагинации, сортировки и первого фильтра списка `Application` по статусу.
 
 В источниках проекта должен находиться только один файл с точным названием:
 
@@ -28,10 +28,12 @@ PROJECT_STATUS.md
 - идемпотентная повторная установка текущего статуса;
 - пагинация списка;
 - сортировка списка;
+- необязательная фильтрация списка по `ApplicationStatus`;
 - собственный DTO для paged response;
 - проверка параметров `page` и `size`;
 - проверка разрешённых полей и направлений сортировки;
-- единый формат ошибок для method validation и бизнес-ошибок сортировки.
+- преобразование строкового query-параметра в enum;
+- единый формат ошибок для method validation, сортировки и неверных enum-значений.
 
 Текущий крупный этап:
 
@@ -44,15 +46,16 @@ PROJECT_STATUS.md
 ```text
 Пагинация Application
 Сортировка Application
+Фильтрация Application по status
 ```
 
 Следующая часть этапа:
 
 ```text
-Фильтрация списка Application
+Расширение фильтрации списка Application
 ```
 
-Первым небольшим шагом нужно добавить необязательный фильтр по `ApplicationStatus`.
+Следующий небольшой шаг — добавить необязательный фильтр по `vacancyId` и корректно обработать его комбинацию с уже существующим `status`.
 
 ---
 
@@ -61,13 +64,13 @@ PROJECT_STATUS.md
 Последний рабочий code-коммит:
 
 ```text
-9c77228 Add Application sorting
+3c75b4e Add Application status filtering
 ```
 
 Последний documentation-коммит до обновления этого файла:
 
 ```text
-f6e224e Update project status after Application pagination
+3dc440f Update project status after Application sorting
 ```
 
 Последние завершённые code-коммиты:
@@ -82,6 +85,7 @@ a76960f Add Application status transition rules
 6a882b5 Validate applied date for Application status
 4bbbd31 Add Application pagination
 9c77228 Add Application sorting
+3c75b4e Add Application status filtering
 ```
 
 Состояние Git после отправки последнего code-коммита:
@@ -93,12 +97,12 @@ Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
 
-Всего в проекте **105 тестов**.
+Всего в проекте **108 тестов**.
 
 Последний полный запуск:
 
 ```text
-Tests run: 105
+Tests run: 108
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -198,7 +202,7 @@ DELETE /api/vacancies/{id}
 
 ### Application
 
-Для `Application` завершены CRUD, основные бизнес-правила, пагинация и сортировка:
+Для `Application` завершены CRUD, основные бизнес-правила, пагинация, сортировка и первый фильтр:
 
 - [x] Enum `ApplicationStatus`.
 - [x] Статусы `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
@@ -236,12 +240,20 @@ DELETE /api/vacancies/{id}
 - [x] Неверное поле сортировки возвращает управляемый `400 Bad Request`.
 - [x] Неверное направление сортировки возвращает управляемый `400 Bad Request`.
 - [x] Двухпараметровый Service-метод делегирует основной реализации с сортировкой по умолчанию.
+- [x] Необязательный query-параметр `status`.
+- [x] `status` в Controller имеет тип `ApplicationStatus`.
+- [x] Без `status` используется `findAll(pageable)`.
+- [x] С `status` используется derived query `findAllByStatus(status, pageable)`.
+- [x] Фильтр сохраняет пагинацию и сортировку.
+- [x] Неизвестное enum-значение возвращает управляемый `400 Bad Request`.
+- [x] `MethodArgumentTypeMismatchException` обрабатывается централизованно.
+- [x] При ошибке преобразования enum Service и Mapper не вызываются.
 
 Endpoint:
 
 ```text
 POST   /api/applications
-GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC
+GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTERVIEW
 GET    /api/applications/{id}
 PUT    /api/applications/{id}
 PATCH  /api/applications/{id}/status
@@ -364,10 +376,11 @@ totalPages
 
 ```text
 ApplicationController
-→ ApplicationService.getAllApplications(page, size, sortBy, direction)
+→ ApplicationService.getAllApplications(page, size, sortBy, direction, status)
 → Sort
 → PageRequest.of(page, size, sort)
-→ ApplicationRepository.findAll(pageable)
+→ status отсутствует: ApplicationRepository.findAll(pageable)
+→ status передан: ApplicationRepository.findAllByStatus(status, pageable)
 → Page<Application>
 → ApplicationMapper.toResponse(...)
 → PagedResponse<ApplicationResponse>
@@ -464,9 +477,12 @@ getAllApplications(
         int page,
         int size,
         String sortBy,
-        String direction
+        String direction,
+        ApplicationStatus status
 )
 ```
+
+Четырёхпараметровый метод делегирует ему со значением `status = null`.
 
 Создание сортировки:
 
@@ -483,11 +499,17 @@ String direction
 getAllApplications(int page, int size)
 ```
 
-делегирует основному методу со значениями:
+делегирует четырёхпараметровому методу со значениями:
 
 ```text
 sortBy=createdAt
 direction=DESC
+```
+
+Далее четырёхпараметровый метод вызывает пятиаргументный со значением:
+
+```text
+status=null
 ```
 
 Это:
@@ -562,6 +584,163 @@ Controller-тесты проверяют:
 
 ---
 
+
+## Фильтрация Application по status
+
+### HTTP-контракт
+
+```text
+GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTERVIEW
+```
+
+Параметр:
+
+```text
+status — необязательный статус Application
+```
+
+Поддерживаются значения enum:
+
+```text
+PLANNED
+APPLIED
+TEST_TASK
+INTERVIEW
+OFFER
+REJECTED
+WITHDRAWN
+```
+
+Если `status` отсутствует:
+
+```text
+status = null
+→ applicationRepository.findAll(pageable)
+```
+
+Если `status` передан:
+
+```text
+status = ApplicationStatus.INTERVIEW
+→ applicationRepository.findAllByStatus(status, pageable)
+```
+
+Один и тот же `Pageable` передаёт в Repository:
+
+- номер страницы;
+- размер страницы;
+- сортировку.
+
+Поэтому фильтрация не отменяет существующие пагинацию и сортировку.
+
+### Repository
+
+Используется derived query:
+
+```java
+Page<Application> findAllByStatus(
+        ApplicationStatus status,
+        Pageable pageable
+);
+```
+
+Spring Data строит запрос из имени метода.
+
+Derived query выбран потому, что текущий фильтр содержит только одно простое условие. `Specification` пока добавила бы лишнюю инфраструктуру и усложнила бы код без практической пользы.
+
+### Преобразование query-параметра в enum
+
+Controller принимает:
+
+```java
+@RequestParam(required = false)
+ApplicationStatus status
+```
+
+Spring MVC преобразует строку из HTTP-запроса в `ApplicationStatus` до выполнения метода Controller.
+
+Корректный пример:
+
+```text
+status=INTERVIEW
+→ ApplicationStatus.INTERVIEW
+```
+
+Некорректный пример:
+
+```text
+status=UNKNOWN
+→ MethodArgumentTypeMismatchException
+```
+
+Это не Bean Validation. Ошибка возникает на этапе преобразования типа аргумента Controller.
+
+### Обработка неизвестного значения
+
+`GlobalExceptionHandler` обрабатывает:
+
+```text
+MethodArgumentTypeMismatchException
+```
+
+Клиент получает:
+
+```json
+{
+  "status": 400,
+  "error": "Bad request",
+  "message": "Unsupported value for parameter status: UNKNOWN",
+  "path": "/api/applications",
+  "fieldErrors": {}
+}
+```
+
+Внутренний текст исключения Spring клиенту не возвращается.
+
+Запрос с неизвестным статусом не доходит до Service, поэтому при таком сценарии:
+
+- `ApplicationService` не вызывается;
+- `ApplicationMapper` не вызывается;
+- Repository не вызывается.
+
+### Перегрузки Service
+
+Текущий поток вызовов:
+
+```text
+getAllApplications(page, size)
+→ getAllApplications(page, size, sortBy, direction)
+→ getAllApplications(page, size, sortBy, direction, status)
+→ Repository
+```
+
+Обратных вызовов между перегрузками быть не должно, иначе возникает бесконечная рекурсия и `StackOverflowError`.
+
+Во время реализации такая ошибка была обнаружена тестами и исправлена.
+
+### Тестирование фильтра
+
+Service-тест проверяет:
+
+- передачу `ApplicationStatus.INTERVIEW`;
+- создание `Pageable` с ожидаемой сортировкой;
+- вызов `findAllByStatus(status, pageable)`;
+- отсутствие вызова `findAll(pageable)`;
+- преобразование Entity в `ApplicationResponse`;
+- содержимое и метаданные `PagedResponse`.
+
+Controller-тесты проверяют:
+
+- преобразование `status=INTERVIEW` в enum;
+- передачу статуса в Service;
+- JSON содержимого страницы;
+- отсутствие фильтра как `status = null`;
+- неизвестное значение `UNKNOWN`;
+- единый формат `ErrorResponse`;
+- отсутствие вызовов Service и Mapper при ошибке типа.
+
+---
+
 ## Текущий контракт Application API
 
 ### POST /api/applications
@@ -574,7 +753,7 @@ Controller-тесты проверяют:
 
 ### GET /api/applications
 
-- принимает `page`, `size`, `sortBy`, `direction`;
+- принимает `page`, `size`, `sortBy`, `direction`, необязательный `status`;
 - возвращает `PagedResponse<ApplicationResponse>`;
 - успешный статус: `200 OK`;
 - значения по умолчанию: `page=0`, `size=10`, `sortBy=createdAt`, `direction=DESC`;
@@ -586,7 +765,10 @@ Controller-тесты проверяют:
 - страница за пределами данных возвращает пустой `content`;
 - неправильное поле возвращает `400 Bad Request`;
 - неправильное направление возвращает `400 Bad Request`;
-- фильтрация пока не добавлена.
+- без `status` возвращаются все Application;
+- с `status` возвращаются только Application с указанным статусом;
+- неизвестное значение `status` возвращает `400 Bad Request`;
+- фильтры по Vacancy, Company и датам пока не добавлены.
 
 ### GET /api/applications/{id}
 
@@ -645,8 +827,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Допустимость полей сортировки проверяется в Service.
 - Controller принимает query-параметры, но не решает, какие поля разрешены.
 - Repository получает уже подготовленный `Pageable`.
+- Необязательный enum-параметр преобразуется Spring MVC до выполнения Controller.
+- Отсутствующий фильтр передаётся в Service как `null`.
+- Выбор между `findAll(pageable)` и `findAllByStatus(status, pageable)` находится в Service.
+- Derived query используется для одного простого фильтра.
 - При ошибочных сценариях проверяется отсутствие лишних взаимодействий.
-- Универсальные CRUD- и sorting-классы пока не добавляются.
+- Универсальные CRUD-, sorting- и filtering-классы пока не добавляются.
 
 ---
 
@@ -682,7 +868,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - почему допустимые поля сортировки проверяются в Service;
 - зачем нужен allow-list полей сортировки;
 - зачем старый Service-метод делегирует основной реализации;
-- почему внешний API не должен зависеть от внутреннего текста ошибки Spring Data.
+- почему внешний API не должен зависеть от внутреннего текста ошибки Spring Data;
+- зачем параметр `status` имеет тип `ApplicationStatus`;
+- что означает `status = null`;
+- почему неизвестный enum не доходит до Service;
+- назначение `MethodArgumentTypeMismatchException`;
+- почему для одного фильтра выбран derived query.
 
 ### JPA и Spring Data
 
@@ -699,7 +890,9 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - назначение `Sort`;
 - `Sort.Direction.ASC` и `Sort.Direction.DESC`;
 - `Sort.Direction.fromString(...)`;
-- `Sort.by(direction, property)`.
+- `Sort.by(direction, property)`;
+- derived query `findAllByStatus(status, pageable)`;
+- передача `Pageable` в фильтрующий repository-метод.
 
 ### Тестирование
 
@@ -716,7 +909,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - отсутствие вызова Service при ошибочной HTTP-валидации;
 - проверка `Pageable` с ожидаемым `Sort`;
 - проверка отсутствия Repository/Mapper при неверной сортировке;
-- Controller-тесты для успешной и ошибочной сортировки.
+- Controller-тесты для успешной и ошибочной сортировки;
+- Service-тест фильтрации по статусу;
+- проверка отсутствия обычного `findAll(pageable)` при активном фильтре;
+- Controller-тест преобразования строки в enum;
+- тест `MethodArgumentTypeMismatchException`;
+- проверка отсутствия Service/Mapper при неизвестном enum.
 
 ---
 
@@ -730,9 +928,10 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - поведение сортировки по nullable-полям;
 - порядок `NULL` при `ASC` и `DESC` в PostgreSQL;
 - стабильность сортировки при одинаковых значениях поля;
-- фильтрация через derived query;
-- фильтрация с `Pageable`;
-- выбор между несколькими repository-методами и `Specification`;
+- построение Spring Data запроса по имени derived query;
+- выбор между несколькими repository-методами;
+- рост количества derived query при добавлении фильтров;
+- переход к `Specification`;
 - комбинирование нескольких необязательных фильтров;
 - Flyway вместо Hibernate DDL;
 - границы между DTO validation, method validation, Service и базой данных.
@@ -741,9 +940,10 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Технический долг и ограничения
 
-- Пагинация и сортировка реализованы только для `Application`.
-- Для `Company` и `Vacancy` пагинация и сортировка пока не добавлены.
-- Фильтрация не реализована.
+- Пагинация, сортировка и фильтр по статусу реализованы только для `Application`.
+- Для `Company` и `Vacancy` пагинация, сортировка и фильтрация пока не добавлены.
+- Для `Application` пока реализован только один фильтр — `status`.
+- Фильтры по `vacancyId`, `companyId` и датам пока не реализованы.
 - Пока нет дополнительной сортировки по `id` для полностью стабильного порядка при одинаковых значениях основного поля.
 - `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
 - Method validation возвращает первое найденное сообщение.
@@ -765,42 +965,63 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Следующее задание
 
-Добавить первый простой фильтр списка `Application` — по статусу.
+Добавить второй необязательный фильтр списка `Application` — по `vacancyId`.
 
 Предварительный HTTP-контракт:
 
 ```text
-GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTERVIEW
+GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&vacancyId=20
 ```
 
-Параметр `status` должен быть необязательным:
+Нужно поддержать четыре комбинации:
 
-- если `status` отсутствует, возвращаются все Application;
-- если `status` передан, возвращаются только Application с этим статусом;
-- пагинация и сортировка должны продолжить работать;
-- неизвестное enum-значение должно возвращать управляемый `400 Bad Request`.
+```text
+status отсутствует, vacancyId отсутствует
+status передан, vacancyId отсутствует
+status отсутствует, vacancyId передан
+status передан, vacancyId передан
+```
+
+Ожидаемая логика Repository:
+
+```text
+нет фильтров
+→ findAll(pageable)
+
+только status
+→ findAllByStatus(status, pageable)
+
+только vacancyId
+→ findAllByVacancyId(vacancyId, pageable)
+
+status и vacancyId
+→ findAllByStatusAndVacancyId(status, vacancyId, pageable)
+```
+
+Точные имена derived query нужно сверить с полями Entity. Для связи `Application.vacancy` может понадобиться путь по вложенному свойству `vacancy.id`.
 
 Рекомендуемая последовательность:
 
-1. Повторить, как Spring преобразует строковый query-параметр в enum.
-2. Определить тип параметра Controller: `ApplicationStatus`.
-3. Добавить repository-метод с `ApplicationStatus` и `Pageable`.
-4. Изменить Service так, чтобы он выбирал repository-вызов в зависимости от наличия `status`.
-5. Сначала добавить Service unit-тесты.
-6. Проверить отсутствие фильтра.
-7. Проверить фильтр по одному статусу.
-8. Затем обновить Controller и `MockMvc`-тесты.
-9. Проверить корректное enum-значение.
-10. Проверить неизвестное enum-значение.
-11. Сохранить существующие пагинацию и сортировку.
-12. Сделать отдельный небольшой code-коммит.
+1. Повторить, как derived query обращается к вложенному полю связанной Entity.
+2. Выбрать точное имя repository-метода для `vacancy.id`.
+3. Сначала добавить repository-методы.
+4. Добавить Service-тест для фильтра только по `vacancyId`.
+5. Добавить Service-тест для комбинации `status + vacancyId`.
+6. Расширить основной Service-метод параметром `Long vacancyId`.
+7. Реализовать четыре ветки выбора Repository.
+8. Обновить делегирующие перегрузки без рекурсии.
+9. Добавить необязательный `@RequestParam Long vacancyId` в Controller.
+10. Обновить старые Controller-тесты.
+11. Добавить успешный Controller-тест для `vacancyId`.
+12. Добавить тест комбинации `status + vacancyId`.
+13. Запустить полный набор тестов.
+14. Сделать отдельный code-коммит.
 
 На этом шаге пока не добавлять:
 
-- фильтр по компании;
-- фильтр по Vacancy;
+- фильтр по Company;
 - фильтры по датам;
-- несколько статусов одновременно;
+- несколько статусов;
 - `Specification`;
 - Criteria API;
 - JPQL;
@@ -810,71 +1031,85 @@ GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTE
 - frontend;
 - универсальный фильтр для всех сущностей.
 
+Этот шаг нужен не только ради функциональности. Он покажет, как число derived query растёт при комбинировании независимых фильтров. После него нужно отдельно решить, продолжать ли derived query или переходить к `Specification`.
+
 ---
 
-## Предварительный вариант Repository
+## Предварительные варианты Repository
 
-Первый простой вариант может использовать derived query:
+Возможные методы:
 
 ```java
-Page<Application> findAllByStatus(
-        ApplicationStatus status,
+Page<Application> findAllByVacancyId(
+        Long vacancyId,
         Pageable pageable
 );
 ```
 
-Логика Service:
+или, если Spring Data требует явный путь по вложенному свойству:
 
-```text
-status отсутствует
-→ applicationRepository.findAll(pageable)
-
-status передан
-→ applicationRepository.findAllByStatus(status, pageable)
+```java
+Page<Application> findAllByVacancy_Id(
+        Long vacancyId,
+        Pageable pageable
+);
 ```
+
+Для комбинации:
+
+```java
+Page<Application> findAllByStatusAndVacancyId(
+        ApplicationStatus status,
+        Long vacancyId,
+        Pageable pageable
+);
+```
+
+Точное имя нужно выбрать после проверки структуры `Application` и правил Spring Data derived query.
 
 Полную реализацию нужно написать самостоятельно после разбора нового шага.
 
 ---
 
-## Критерии готовности фильтра по статусу
+## Критерии готовности фильтра по vacancyId
 
-Фильтр по статусу завершён, когда:
+Фильтр завершён, когда:
 
-- `status` является необязательным query-параметром;
-- без `status` возвращается полный paged список;
-- с `status` возвращаются только подходящие Application;
-- пагинация продолжает работать;
-- сортировка продолжает работать;
-- Repository получает тот же подготовленный `Pageable`;
-- неизвестное значение статуса возвращает `400 Bad Request`;
-- ошибка имеет единый `ErrorResponse`;
-- Service покрыт unit-тестами;
+- `vacancyId` является необязательным query-параметром;
+- без фильтров возвращается полный paged список;
+- работает фильтр только по `status`;
+- работает фильтр только по `vacancyId`;
+- работает комбинация `status + vacancyId`;
+- пагинация и сортировка сохраняются во всех четырёх ветках;
+- Repository получает один и тот же подготовленный `Pageable`;
+- Service покрыт unit-тестами для новых веток;
 - Controller покрыт `MockMvc`-тестами;
-- существующие тесты не сломаны;
+- существующие 108 тестов не сломаны;
 - полный набор тестов проходит;
 - изменение закоммичено отдельно;
 - code-коммит отправлен на GitHub;
-- разработчик может объяснить, почему пока выбран derived query, а не `Specification`.
+- разработчик может объяснить, почему количество derived query растёт при добавлении независимых фильтров.
 
 ---
 
 ## Вопросы для повторения
 
-1. Что содержит `Sort`?
-2. Чем `Sort.Direction.ASC` отличается от `Sort.Direction.DESC`?
-3. Почему нельзя передавать любое клиентское `sortBy` в `Sort.by(...)`?
-4. Почему allow-list находится в Service?
-5. Как пагинация и сортировка объединяются в одном `PageRequest`?
-6. Зачем двухпараметровый Service-метод делегирует четырёхпараметровому?
-7. Почему параметры сортировки не добавлены в `PagedResponse`?
-8. Почему внутренний `IllegalArgumentException` Spring Data преобразуется в `InvalidApplicationDataException`?
-9. Что произойдёт, если две записи имеют одинаковый `createdAt`?
-10. Что должен делать API, если параметр `status` не передан?
-11. Какой тип лучше использовать для `status` в Controller: `String` или `ApplicationStatus`, и почему?
-12. Чем `findAll(pageable)` будет отличаться от `findAllByStatus(status, pageable)`?
-13. Почему первый фильтр лучше реализовать отдельно, а не сразу добавлять `Specification`?
-14. Какие тесты нужны, чтобы доказать, что фильтрация не сломала сортировку и пагинацию?
+1. Что получает Service, если query-параметр `status` отсутствует?
+2. Почему `status` в Controller имеет тип `ApplicationStatus`, а не `String`?
+3. Почему `status=UNKNOWN` не доходит до Service?
+4. Чем преобразование enum отличается от Bean Validation?
+5. Зачем обрабатывать `MethodArgumentTypeMismatchException`?
+6. Почему внутренний текст исключения Spring не нужно возвращать клиенту?
+7. Почему `findAllByStatus` принимает `Pageable`?
+8. Что хранится в переданном `Pageable`?
+9. Чем `findAll(pageable)` отличается от `findAllByStatus(status, pageable)`?
+10. Почему для одного фильтра derived query проще, чем `Specification`?
+11. Что произойдёт с количеством repository-методов после добавления `vacancyId`?
+12. Какие четыре комбинации возникают у двух необязательных фильтров?
+13. Как derived query может обратиться к `vacancy.id`?
+14. Почему все перегрузки Service должны делегировать только в одном направлении?
+15. Из-за чего во время реализации возник `StackOverflowError`?
+16. Какие тесты докажут, что комбинация `status + vacancyId` не сломала пагинацию и сортировку?
 
 ---
 
@@ -894,7 +1129,7 @@ git --no-pager diff -- PROJECT_STATUS.md
 git add PROJECT_STATUS.md
 git --no-pager diff --cached
 git status
-git commit -m "Update project status after Application sorting"
+git commit -m "Update project status after Application status filtering"
 git push
 git status
 ```
@@ -902,5 +1137,5 @@ git status
 Рекомендуемое сообщение коммита:
 
 ```text
-Update project status after Application sorting
+Update project status after Application status filtering
 ```
