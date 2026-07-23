@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -630,7 +631,16 @@ class ApplicationServiceTest {
         int page = 0;
         int size = 2;
 
-        Pageable pageable = PageRequest.of(page, size);
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                "createdAt"
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
 
         Application firstApplication = mock(Application.class);
         Application secondApplication = mock(Application.class);
@@ -673,7 +683,17 @@ class ApplicationServiceTest {
         int page = 5;
         int size = 10;
 
-        Pageable pageable = PageRequest.of(page, size);
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                "createdAt"
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
         Page<Application> repositoryPage = Page.empty(pageable);
 
         when(applicationRepository.findAll(pageable))
@@ -690,5 +710,170 @@ class ApplicationServiceTest {
 
         verify(applicationRepository).findAll(pageable);
         verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsSortedDescendingByCreatedAt() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        long totalElements = 2;
+
+        Sort.Direction sortDirection = Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse = mock(ApplicationResponse.class);
+        ApplicationResponse secondResponse = mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        List<ApplicationResponse> expectedContent = List.of(
+                firstResponse,
+                secondResponse
+        );
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                applications,
+                pageable,
+                totalElements
+        );
+
+        when(applicationRepository.findAll(pageable))
+                .thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result = applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+
+        verify(applicationRepository).findAll(pageable);
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
+
+    @Test
+    void shouldReturnApplicationsSortedAscendingByAppliedAt() {
+        int page = 1;
+        int size = 5;
+        String sortBy = "appliedAt";
+        String direction = "ASC";
+        long totalElements = 8;
+
+        Sort.Direction sortDirection = Sort.Direction.ASC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse = mock(ApplicationResponse.class);
+        ApplicationResponse secondResponse = mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        List<ApplicationResponse> expectedContent = List.of(
+                firstResponse,
+                secondResponse
+        );
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                applications,
+                pageable,
+                totalElements
+        );
+
+        when(applicationRepository.findAll(pageable))
+                .thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result = applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+
+        verify(applicationRepository).findAll(pageable);
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
+
+    @Test
+    void shouldRejectUnsupportedSortField() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "unknownField";
+        String direction = "ASC";
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction
+                )
+        );
+
+        assertEquals("Unsupported sort field: unknownField", exception.getMessage());
+
+        verifyNoInteractions(applicationRepository, applicationMapper);
+    }
+
+    @Test
+    void shouldRejectUnsupportedSortDirection() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "SIDEWAYS";
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction
+                )
+        );
+
+        assertEquals(
+                "Unsupported sort direction: SIDEWAYS",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(applicationRepository, applicationMapper);
     }
 }

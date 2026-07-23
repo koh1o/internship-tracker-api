@@ -172,6 +172,8 @@ class ApplicationControllerTest {
     void shouldGetPagedApplications() throws Exception {
         int page = 0;
         int size = 2;
+        String sortBy = "appliedAt";
+        String direction = "ASC";
         long totalElements = 5;
         int totalPages = 3;
 
@@ -227,12 +229,18 @@ class ApplicationControllerTest {
                         totalPages
                 );
 
-        when(applicationService.getAllApplications(page, size))
-                .thenReturn(pagedResponse);
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
                         .param("page", String.valueOf(page))
-                        .param("size", String.valueOf(size)))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content.length()").value(2))
@@ -247,7 +255,12 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(totalElements))
                 .andExpect(jsonPath("$.totalPages").value(totalPages));
 
-        verify(applicationService).getAllApplications(page, size);
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
         verifyNoInteractions(applicationMapper);
     }
 
@@ -704,6 +717,8 @@ class ApplicationControllerTest {
     void shouldUseDefaultPaginationParameters() throws Exception {
         int defaultPage = 0;
         int defaultSize = 10;
+        String defaultSortBy = "createdAt";
+        String defaultDirection = "DESC";
         long totalElements = 0;
         int totalPages = 0;
 
@@ -718,8 +733,12 @@ class ApplicationControllerTest {
                         totalPages
                 );
 
-        when(applicationService.getAllApplications(defaultPage, defaultSize))
-                .thenReturn(pagedResponse);
+        when(applicationService.getAllApplications(
+                defaultPage,
+                defaultSize,
+                defaultSortBy,
+                defaultDirection
+        )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications"))
                 .andExpect(status().isOk())
@@ -731,7 +750,12 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(totalElements))
                 .andExpect(jsonPath("$.totalPages").value(totalPages));
 
-        verify(applicationService).getAllApplications(defaultPage, defaultSize);
+        verify(applicationService).getAllApplications(
+                defaultPage,
+                defaultSize,
+                defaultSortBy,
+                defaultDirection
+        );
         verifyNoInteractions(applicationMapper);
     }
 
@@ -796,5 +820,91 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.fieldErrors").isEmpty());
 
         verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldRejectUnsupportedSortField() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "unknownField";
+        String direction = "ASC";
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Unsupported sort field: " + sortBy
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        )).thenThrow(exception);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Unsupported sort field: unknownField"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectUnsupportedSortDirection() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "SIDEWAYS";
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Unsupported sort direction: " + direction
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        )).thenThrow(exception);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value("Unsupported sort direction: SIDEWAYS"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
+        verifyNoInteractions(applicationMapper);
     }
 }

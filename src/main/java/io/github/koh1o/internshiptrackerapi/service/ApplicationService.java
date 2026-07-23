@@ -16,10 +16,12 @@ import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ApplicationService {
@@ -27,6 +29,13 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final VacancyRepository vacancyRepository;
     private final ApplicationMapper applicationMapper;
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt",
+            "appliedAt",
+            "nextContactAt",
+            "status"
+    );
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -36,6 +45,54 @@ public class ApplicationService {
         this.applicationRepository = applicationRepository;
         this.vacancyRepository = vacancyRepository;
         this.applicationMapper = applicationMapper;
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+
+        if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            throw new InvalidApplicationDataException(
+                    "Unsupported sort field: " + sortBy
+            );
+        }
+
+        Sort.Direction sortDirection;
+
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidApplicationDataException(
+                    "Unsupported sort direction: " + direction
+            );
+        }
+
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Page<Application> applicationPage =
+                applicationRepository.findAll(pageable);
+
+        List<ApplicationResponse> content = applicationPage.getContent()
+                .stream()
+                .map(applicationMapper::toResponse)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                applicationPage.getNumber(),
+                applicationPage.getSize(),
+                applicationPage.getTotalElements(),
+                applicationPage.getTotalPages()
+        );
     }
 
     public Application createApplication(ApplicationRequest request) {
@@ -58,21 +115,15 @@ public class ApplicationService {
         return savedApplication;
     }
 
-    public PagedResponse<ApplicationResponse> getAllApplications(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Application> applicationPage = applicationRepository.findAll(pageable);
-
-        List<ApplicationResponse> content = applicationPage.getContent()
-                .stream()
-                .map(applicationMapper::toResponse)
-                .toList();
-
-        return new PagedResponse<>(
-                content,
-                applicationPage.getNumber(),
-                applicationPage.getSize(),
-                applicationPage.getTotalElements(),
-                applicationPage.getTotalPages()
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size
+    ) {
+        return getAllApplications(
+                page,
+                size,
+                "createdAt",
+                "DESC"
         );
     }
 

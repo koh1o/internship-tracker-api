@@ -58,9 +58,18 @@ public class ApplicationController {
 
             @Min(1)
             @Max(100)
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+
+            @RequestParam(defaultValue = "DESC") String direction
     ) {
-        return applicationService.getAllApplications(page, size);
+        return applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction
+        );
     }
 
     @GetMapping("/{id}")
