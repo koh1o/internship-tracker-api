@@ -4,7 +4,7 @@
 
 Последнее обновление: **2026-07-23**.
 
-Это актуальная стабильная точка проекта после завершения пагинации списка `Application`.
+Это актуальная стабильная точка проекта после завершения пагинации и сортировки списка `Application`.
 
 В источниках проекта должен находиться только один файл с точным названием:
 
@@ -27,9 +27,11 @@ PROJECT_STATUS.md
 - явные правила переходов статусов;
 - идемпотентная повторная установка текущего статуса;
 - пагинация списка;
+- сортировка списка;
 - собственный DTO для paged response;
 - проверка параметров `page` и `size`;
-- единый формат ошибок для method validation.
+- проверка разрешённых полей и направлений сортировки;
+- единый формат ошибок для method validation и бизнес-ошибок сортировки.
 
 Текущий крупный этап:
 
@@ -37,15 +39,20 @@ PROJECT_STATUS.md
 Фильтрация, сортировка и пагинация
 ```
 
-Пагинация `Application` завершена.
+Завершены:
+
+```text
+Пагинация Application
+Сортировка Application
+```
 
 Следующая часть этапа:
 
 ```text
-Сортировка списка Application
+Фильтрация списка Application
 ```
 
-После сортировки нужно перейти к фильтрации.
+Первым небольшим шагом нужно добавить необязательный фильтр по `ApplicationStatus`.
 
 ---
 
@@ -54,13 +61,13 @@ PROJECT_STATUS.md
 Последний рабочий code-коммит:
 
 ```text
-4bbbd31 Add Application pagination
+9c77228 Add Application sorting
 ```
 
 Последний documentation-коммит до обновления этого файла:
 
 ```text
-8cef1e5 Update project status after Application business rules
+f6e224e Update project status after Application pagination
 ```
 
 Последние завершённые code-коммиты:
@@ -74,6 +81,7 @@ aa61b8f Add Application delete endpoint
 a76960f Add Application status transition rules
 6a882b5 Validate applied date for Application status
 4bbbd31 Add Application pagination
+9c77228 Add Application sorting
 ```
 
 Состояние Git после отправки последнего code-коммита:
@@ -85,12 +93,12 @@ Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
 
-Всего в проекте **99 тестов**.
+Всего в проекте **105 тестов**.
 
 Последний полный запуск:
 
 ```text
-Tests run: 99
+Tests run: 105
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -121,6 +129,7 @@ BUILD SUCCESS
 - [x] Code-коммиты небольшие и осмысленные.
 - [x] Documentation-коммиты не смешиваются с Java-кодом.
 - [x] Последний code-коммит отправлен на GitHub.
+- [x] После `git push` проверяется чистый working tree.
 
 ### Spring Boot и PostgreSQL
 
@@ -132,6 +141,7 @@ BUILD SUCCESS
 - [x] Создана база данных `internship_tracker`.
 - [x] Создана роль `internship_tracker_app`.
 - [x] Секреты не хранятся в Git.
+- [x] Пароль базы данных передаётся через переменную окружения.
 
 ### Company
 
@@ -188,7 +198,7 @@ DELETE /api/vacancies/{id}
 
 ### Application
 
-Для `Application` завершены CRUD, основные бизнес-правила и пагинация:
+Для `Application` завершены CRUD, основные бизнес-правила, пагинация и сортировка:
 
 - [x] Enum `ApplicationStatus`.
 - [x] Статусы `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
@@ -220,12 +230,18 @@ DELETE /api/vacancies/{id}
 - [x] Проверка границ `page` и `size`.
 - [x] Единый `ErrorResponse` для method validation.
 - [x] Пустая страница за пределами данных возвращается с `200 OK`.
+- [x] Сортировка объединена с пагинацией.
+- [x] Поддерживаются направления `ASC` и `DESC`.
+- [x] Используется безопасный список разрешённых полей сортировки.
+- [x] Неверное поле сортировки возвращает управляемый `400 Bad Request`.
+- [x] Неверное направление сортировки возвращает управляемый `400 Bad Request`.
+- [x] Двухпараметровый Service-метод делегирует основной реализации с сортировкой по умолчанию.
 
 Endpoint:
 
 ```text
 POST   /api/applications
-GET    /api/applications?page=0&size=10
+GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC
 GET    /api/applications/{id}
 PUT    /api/applications/{id}
 PATCH  /api/applications/{id}/status
@@ -348,8 +364,9 @@ totalPages
 
 ```text
 ApplicationController
-→ ApplicationService.getAllApplications(page, size)
-→ PageRequest.of(page, size)
+→ ApplicationService.getAllApplications(page, size, sortBy, direction)
+→ Sort
+→ PageRequest.of(page, size, sort)
 → ApplicationRepository.findAll(pageable)
 → Page<Application>
 → ApplicationMapper.toResponse(...)
@@ -398,6 +415,153 @@ HandlerMethodValidationException
 
 ---
 
+## Сортировка Application
+
+### HTTP-контракт
+
+```text
+GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC
+```
+
+Query-параметры:
+
+```text
+sortBy — поле Entity, по которому выполняется сортировка
+direction — направление сортировки
+```
+
+Значения по умолчанию:
+
+```text
+sortBy=createdAt
+direction=DESC
+```
+
+Разрешённые поля:
+
+```text
+createdAt
+appliedAt
+nextContactAt
+status
+```
+
+Разрешённые направления:
+
+```text
+ASC
+DESC
+```
+
+`Sort.Direction.fromString(...)` принимает направление без учёта регистра, но внешний контракт и тесты используют `ASC` и `DESC`.
+
+### Архитектурное поведение
+
+Основной Service-метод:
+
+```java
+getAllApplications(
+        int page,
+        int size,
+        String sortBy,
+        String direction
+)
+```
+
+Создание сортировки:
+
+```text
+String direction
+→ Sort.Direction
+→ Sort.by(sortDirection, sortBy)
+→ PageRequest.of(page, size, sort)
+```
+
+Двухпараметровый метод:
+
+```java
+getAllApplications(int page, int size)
+```
+
+делегирует основному методу со значениями:
+
+```text
+sortBy=createdAt
+direction=DESC
+```
+
+Это:
+
+- сохраняет старую сигнатуру;
+- не дублирует получение и маппинг страницы;
+- обеспечивает стабильный порядок по умолчанию;
+- оставляет основную реализацию в одном месте.
+
+### Проверка поля сортировки
+
+В `ApplicationService` используется allow-list:
+
+```text
+ALLOWED_SORT_FIELDS
+```
+
+Клиентское значение нельзя без проверки передавать в `Sort.by(...)`, потому что неизвестное имя свойства может привести к runtime-ошибке Spring Data/JPA.
+
+Неизвестное поле вызывает:
+
+```text
+InvalidApplicationDataException
+```
+
+Сообщение:
+
+```text
+Unsupported sort field: unknownField
+```
+
+### Проверка направления
+
+Вызов `Sort.Direction.fromString(...)` находится в `try/catch`.
+
+Внутренний `IllegalArgumentException` Spring Data преобразуется в проектное исключение:
+
+```text
+InvalidApplicationDataException
+```
+
+Сообщение API:
+
+```text
+Unsupported sort direction: SIDEWAYS
+```
+
+Новый общий обработчик для всех `IllegalArgumentException` не добавлялся, чтобы случайно не скрывать программные ошибки.
+
+### Тестирование сортировки
+
+Service-тесты проверяют:
+
+- `createdAt DESC`;
+- `appliedAt ASC`;
+- передачу ожидаемого `Sort` внутри `Pageable`;
+- неправильное поле;
+- неправильное направление;
+- отсутствие вызовов Repository и Mapper при ошибке;
+- сортировку по умолчанию в старых тестах пагинации.
+
+Controller-тесты проверяют:
+
+- передачу `sortBy` и `direction` в Service;
+- значения по умолчанию `createdAt DESC`;
+- `400 Bad Request` для неправильного поля;
+- `400 Bad Request` для неправильного направления;
+- полный формат `ErrorResponse`;
+- отсутствие вызовов Mapper.
+
+Параметры сортировки не дублируются в `PagedResponse`.
+
+---
+
 ## Текущий контракт Application API
 
 ### POST /api/applications
@@ -410,15 +574,19 @@ HandlerMethodValidationException
 
 ### GET /api/applications
 
-- принимает `page` и `size`;
+- принимает `page`, `size`, `sortBy`, `direction`;
 - возвращает `PagedResponse<ApplicationResponse>`;
 - успешный статус: `200 OK`;
-- значения по умолчанию: `page=0`, `size=10`;
+- значения по умолчанию: `page=0`, `size=10`, `sortBy=createdAt`, `direction=DESC`;
 - `page >= 0`;
 - `1 <= size <= 100`;
+- разрешённые поля: `createdAt`, `appliedAt`, `nextContactAt`, `status`;
+- направления: `ASC`, `DESC`;
 - пустая база возвращает пустой `content`;
 - страница за пределами данных возвращает пустой `content`;
-- сортировка и фильтрация пока не добавлены.
+- неправильное поле возвращает `400 Bad Request`;
+- неправильное направление возвращает `400 Bad Request`;
+- фильтрация пока не добавлена.
 
 ### GET /api/applications/{id}
 
@@ -474,8 +642,11 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Ошибки обрабатываются централизованно.
 - Маппинг пишется вручную.
 - Правила дат и переходов статусов находятся в Service.
+- Допустимость полей сортировки проверяется в Service.
+- Controller принимает query-параметры, но не решает, какие поля разрешены.
+- Repository получает уже подготовленный `Pageable`.
 - При ошибочных сценариях проверяется отсутствие лишних взаимодействий.
-- Универсальные CRUD-классы пока не добавляются.
+- Универсальные CRUD- и sorting-классы пока не добавляются.
 
 ---
 
@@ -507,7 +678,11 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - назначение `PagedResponse<T>`;
 - почему Controller не возвращает `Page<Application>`;
 - почему размер страницы ограничен;
-- почему пустая страница не является `404`.
+- почему пустая страница не является `404`;
+- почему допустимые поля сортировки проверяются в Service;
+- зачем нужен allow-list полей сортировки;
+- зачем старый Service-метод делегирует основной реализации;
+- почему внешний API не должен зависеть от внутреннего текста ошибки Spring Data.
 
 ### JPA и Spring Data
 
@@ -519,7 +694,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - базовое назначение `Page`;
 - базовое назначение `Pageable`;
 - `PageRequest.of(page, size)`;
-- `getNumber()`, `getSize()`, `getTotalElements()`, `getTotalPages()`.
+- `PageRequest.of(page, size, sort)`;
+- `getNumber()`, `getSize()`, `getTotalElements()`, `getTotalPages()`;
+- назначение `Sort`;
+- `Sort.Direction.ASC` и `Sort.Direction.DESC`;
+- `Sort.Direction.fromString(...)`;
+- `Sort.by(direction, property)`.
 
 ### Тестирование
 
@@ -533,7 +713,10 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - тестирование непустой и пустой страницы;
 - параметры по умолчанию;
 - границы `page` и `size`;
-- отсутствие вызова Service при ошибочной HTTP-валидации.
+- отсутствие вызова Service при ошибочной HTTP-валидации;
+- проверка `Pageable` с ожидаемым `Sort`;
+- проверка отсутствия Repository/Mapper при неверной сортировке;
+- Controller-тесты для успешной и ошибочной сортировки.
 
 ---
 
@@ -543,12 +726,14 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - LAZY-связи вне активной JPA-сессии;
 - транзакции и `@Transactional`;
 - различие `MethodArgumentNotValidException` и `HandlerMethodValidationException`;
-- внутреннее устройство `Page`, `Pageable` и `PageRequest`;
-- `Sort` и `Sort.Direction`;
-- объединение сортировки с `PageRequest`;
-- безопасный список разрешённых полей сортировки;
-- обработка неверного поля и направления;
-- фильтрация через derived query, JPQL или `Specification`;
+- внутреннее устройство `Page`, `Pageable`, `PageRequest` и `Sort`;
+- поведение сортировки по nullable-полям;
+- порядок `NULL` при `ASC` и `DESC` в PostgreSQL;
+- стабильность сортировки при одинаковых значениях поля;
+- фильтрация через derived query;
+- фильтрация с `Pageable`;
+- выбор между несколькими repository-методами и `Specification`;
+- комбинирование нескольких необязательных фильтров;
 - Flyway вместо Hibernate DDL;
 - границы между DTO validation, method validation, Service и базой данных.
 
@@ -556,10 +741,10 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Технический долг и ограничения
 
-- Пагинация реализована только для `Application`.
-- Для `Company` и `Vacancy` пагинация пока не добавлена.
-- Сортировка не реализована.
+- Пагинация и сортировка реализованы только для `Application`.
+- Для `Company` и `Vacancy` пагинация и сортировка пока не добавлены.
 - Фильтрация не реализована.
+- Пока нет дополнительной сортировки по `id` для полностью стабильного порядка при одинаковых значениях основного поля.
 - `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
 - Method validation возвращает первое найденное сообщение.
 - `fieldErrors` для query-параметров пока пустой.
@@ -580,76 +765,116 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Следующее задание
 
-Начать сортировку списка `Application`.
+Добавить первый простой фильтр списка `Application` — по статусу.
 
 Предварительный HTTP-контракт:
 
 ```text
-GET /api/applications?page=0&size=10&sortBy=createdAt&direction=desc
+GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTERVIEW
 ```
+
+Параметр `status` должен быть необязательным:
+
+- если `status` отсутствует, возвращаются все Application;
+- если `status` передан, возвращаются только Application с этим статусом;
+- пагинация и сортировка должны продолжить работать;
+- неизвестное enum-значение должно возвращать управляемый `400 Bad Request`.
 
 Рекомендуемая последовательность:
 
-1. Разобраться с `Sort`.
-2. Разобраться с `Sort.Direction`.
-3. Понять, как сортировка передаётся в `PageRequest`.
-4. Выбрать разрешённые поля сортировки.
-5. Определить значения `sortBy` и `direction` по умолчанию.
-6. Сначала изменить Service и unit-тесты.
-7. Затем изменить Controller и `MockMvc`-тесты.
-8. Проверить `ASC` и `DESC`.
-9. Проверить неизвестное направление.
-10. Проверить неизвестное поле.
-11. Сделать отдельный code-коммит.
-12. После сортировки перейти к фильтрации.
+1. Повторить, как Spring преобразует строковый query-параметр в enum.
+2. Определить тип параметра Controller: `ApplicationStatus`.
+3. Добавить repository-метод с `ApplicationStatus` и `Pageable`.
+4. Изменить Service так, чтобы он выбирал repository-вызов в зависимости от наличия `status`.
+5. Сначала добавить Service unit-тесты.
+6. Проверить отсутствие фильтра.
+7. Проверить фильтр по одному статусу.
+8. Затем обновить Controller и `MockMvc`-тесты.
+9. Проверить корректное enum-значение.
+10. Проверить неизвестное enum-значение.
+11. Сохранить существующие пагинацию и сортировку.
+12. Сделать отдельный небольшой code-коммит.
 
-Пока не добавлять:
+На этом шаге пока не добавлять:
 
-- фильтрацию;
+- фильтр по компании;
+- фильтр по Vacancy;
+- фильтры по датам;
+- несколько статусов одновременно;
 - `Specification`;
-- сложные динамические запросы;
+- Criteria API;
+- JPQL;
 - Swagger;
 - Docker;
 - Spring Security;
 - frontend;
-- универсальную сортировку для всех сущностей.
+- универсальный фильтр для всех сущностей.
 
 ---
 
-## Критерии готовности сортировки
+## Предварительный вариант Repository
 
-Сортировка завершена, когда:
+Первый простой вариант может использовать derived query:
 
-- клиент может указать разрешённое поле;
-- клиент может выбрать `ASC` или `DESC`;
-- есть значения по умолчанию;
-- неверное поле не приводит к внутренней ошибке базы;
-- неверное направление возвращает управляемый `400 Bad Request`;
-- сортировка объединена с пагинацией;
+```java
+Page<Application> findAllByStatus(
+        ApplicationStatus status,
+        Pageable pageable
+);
+```
+
+Логика Service:
+
+```text
+status отсутствует
+→ applicationRepository.findAll(pageable)
+
+status передан
+→ applicationRepository.findAllByStatus(status, pageable)
+```
+
+Полную реализацию нужно написать самостоятельно после разбора нового шага.
+
+---
+
+## Критерии готовности фильтра по статусу
+
+Фильтр по статусу завершён, когда:
+
+- `status` является необязательным query-параметром;
+- без `status` возвращается полный paged список;
+- с `status` возвращаются только подходящие Application;
+- пагинация продолжает работать;
+- сортировка продолжает работать;
+- Repository получает тот же подготовленный `Pageable`;
+- неизвестное значение статуса возвращает `400 Bad Request`;
+- ошибка имеет единый `ErrorResponse`;
 - Service покрыт unit-тестами;
 - Controller покрыт `MockMvc`-тестами;
-- все тесты проходят;
+- существующие тесты не сломаны;
+- полный набор тестов проходит;
+- изменение закоммичено отдельно;
 - code-коммит отправлен на GitHub;
-- разработчик может объяснить `Sort` и его связь с `PageRequest`.
+- разработчик может объяснить, почему пока выбран derived query, а не `Specification`.
 
 ---
 
 ## Вопросы для повторения
 
-1. Чем `Page<Application>` отличается от `List<Application>`?
-2. Что описывает `Pageable`?
-3. Зачем нужен `PageRequest.of(page, size)`?
-4. Почему первая страница имеет номер `0`?
-5. Почему страница за пределами данных возвращает пустой `content`?
-6. Почему API возвращает `PagedResponse<ApplicationResponse>`?
-7. Где вызывается `ApplicationMapper` при пагинации?
-8. Чем `MethodArgumentNotValidException` отличается от `HandlerMethodValidationException`?
-9. Почему `size` ограничен значением `100`?
-10. Что означают `totalElements` и `totalPages`?
-11. Почему Controller-тест не проверяет Repository?
-12. Почему при неверных `page` или `size` Service не вызывается?
-13. Что должна описывать сортировка?
-14. Почему нельзя без проверки передавать любое поле в `Sort.by(...)`?
+1. Что содержит `Sort`?
+2. Чем `Sort.Direction.ASC` отличается от `Sort.Direction.DESC`?
+3. Почему нельзя передавать любое клиентское `sortBy` в `Sort.by(...)`?
+4. Почему allow-list находится в Service?
+5. Как пагинация и сортировка объединяются в одном `PageRequest`?
+6. Зачем двухпараметровый Service-метод делегирует четырёхпараметровому?
+7. Почему параметры сортировки не добавлены в `PagedResponse`?
+8. Почему внутренний `IllegalArgumentException` Spring Data преобразуется в `InvalidApplicationDataException`?
+9. Что произойдёт, если две записи имеют одинаковый `createdAt`?
+10. Что должен делать API, если параметр `status` не передан?
+11. Какой тип лучше использовать для `status` в Controller: `String` или `ApplicationStatus`, и почему?
+12. Чем `findAll(pageable)` будет отличаться от `findAllByStatus(status, pageable)`?
+13. Почему первый фильтр лучше реализовать отдельно, а не сразу добавлять `Specification`?
+14. Какие тесты нужны, чтобы доказать, что фильтрация не сломала сортировку и пагинацию?
 
 ---
 
@@ -669,7 +894,7 @@ git --no-pager diff -- PROJECT_STATUS.md
 git add PROJECT_STATUS.md
 git --no-pager diff --cached
 git status
-git commit -m "Update project status after Application pagination"
+git commit -m "Update project status after Application sorting"
 git push
 git status
 ```
@@ -677,5 +902,5 @@ git status
 Рекомендуемое сообщение коммита:
 
 ```text
-Update project status after Application pagination
+Update project status after Application sorting
 ```
