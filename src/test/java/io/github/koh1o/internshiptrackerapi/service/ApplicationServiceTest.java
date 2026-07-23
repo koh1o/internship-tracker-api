@@ -1,6 +1,8 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
+import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -12,6 +14,10 @@ import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,6 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -103,26 +110,6 @@ class ApplicationServiceTest {
 
         verify(vacancyRepository).findById(vacancyId);
         verifyNoInteractions(applicationMapper, applicationRepository);
-    }
-
-    @Test
-    void shouldGetAllApplications() {
-        Application firstApplication = mock(Application.class);
-        Application secondApplication = mock(Application.class);
-
-        List<Application> applications = List.of(
-                firstApplication,
-                secondApplication
-        );
-
-        when(applicationRepository.findAll())
-                .thenReturn(applications);
-
-        List<Application> result = applicationService.getAllApplications();
-
-        assertSame(applications, result);
-
-        verify(applicationRepository).findAll();
     }
 
     @Test
@@ -636,5 +623,72 @@ class ApplicationServiceTest {
 
         verify(applicationRepository, never())
                 .save(any(Application.class));
+    }
+
+    @Test
+    void shouldReturnRequestedApplicationPage() {
+        int page = 0;
+        int size = 2;
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse = mock(ApplicationResponse.class);
+        ApplicationResponse secondResponse = mock(ApplicationResponse.class);
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                List.of(firstApplication, secondApplication),
+                pageable,
+                5
+        );
+
+        when(applicationRepository.findAll(pageable))
+                .thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(page, size);
+
+        assertEquals(
+                List.of(firstResponse, secondResponse),
+                result.content()
+        );
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+
+        verify(applicationRepository).findAll(pageable);
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
+
+    @Test
+    void shouldReturnEmptyApplicationPage() {
+        int page = 5;
+        int size = 10;
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Application> repositoryPage = Page.empty(pageable);
+
+        when(applicationRepository.findAll(pageable))
+                .thenReturn(repositoryPage);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(page, size);
+
+        assertTrue(result.content().isEmpty());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+
+        verify(applicationRepository).findAll(pageable);
+        verifyNoInteractions(applicationMapper);
     }
 }

@@ -1,6 +1,8 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
+import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -11,6 +13,9 @@ import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -53,8 +58,22 @@ public class ApplicationService {
         return savedApplication;
     }
 
-    public List<Application> getAllApplications() {
-        return applicationRepository.findAll();
+    public PagedResponse<ApplicationResponse> getAllApplications(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Application> applicationPage = applicationRepository.findAll(pageable);
+
+        List<ApplicationResponse> content = applicationPage.getContent()
+                .stream()
+                .map(applicationMapper::toResponse)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                applicationPage.getNumber(),
+                applicationPage.getSize(),
+                applicationPage.getTotalElements(),
+                applicationPage.getTotalPages()
+        );
     }
 
     public Application getApplicationById(Long id) {

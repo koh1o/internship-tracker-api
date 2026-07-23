@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
+import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
@@ -168,61 +169,86 @@ class ApplicationControllerTest {
     }
 
     @Test
-    void shouldGetAllApplications() throws Exception {
-        Application firstApplication = mock(Application.class);
-        Application secondApplication = mock(Application.class);
+    void shouldGetPagedApplications() throws Exception {
+        int page = 0;
+        int size = 2;
+        long totalElements = 5;
+        int totalPages = 3;
+
+        LocalDateTime firstAppliedAt = LocalDateTime.of(2026, 7, 20, 10, 0);
+        LocalDateTime firstNextContactAt = LocalDateTime.of(2026, 7, 25, 12, 0);
+        LocalDateTime firstCreatedAt = LocalDateTime.of(2026, 7, 20, 10, 5);
+        LocalDateTime firstUpdatedAt = LocalDateTime.of(2026, 7, 20, 10, 5);
+
+        LocalDateTime secondAppliedAt = LocalDateTime.of(2026, 7, 21, 11, 0);
+        LocalDateTime secondNextContactAt = LocalDateTime.of(2026, 7, 28, 14, 0);
+        LocalDateTime secondCreatedAt = LocalDateTime.of(2026, 7, 21, 11, 5);
+        LocalDateTime secondUpdatedAt = LocalDateTime.of(2026, 7, 22, 9, 0);
 
         ApplicationResponse firstResponse = new ApplicationResponse(
-                30L,
-                20L,
+                1L,
+                10L,
                 "Java Backend Intern",
-                5L,
-                "Example Company",
+                100L,
+                "First Company",
                 ApplicationStatus.APPLIED,
-                LocalDateTime.of(2026, 7, 21, 10, 0),
-                LocalDateTime.of(2026, 7, 28, 10, 0),
+                firstAppliedAt,
+                firstNextContactAt,
                 "Waiting for response",
-                LocalDateTime.of(2026, 7, 21, 10, 5),
-                LocalDateTime.of(2026, 7, 21, 10, 5)
+                firstCreatedAt,
+                firstUpdatedAt
         );
 
         ApplicationResponse secondResponse = new ApplicationResponse(
-                31L,
-                21L,
-                "QA Internship",
-                6L,
-                "Another Company",
+                2L,
+                20L,
+                "Spring Boot Intern",
+                200L,
+                "Second Company",
                 ApplicationStatus.INTERVIEW,
-                LocalDateTime.of(2026, 7, 22, 11, 0),
-                LocalDateTime.of(2026, 7, 29, 11, 0),
-                "Interview scheduled",
-                LocalDateTime.of(2026, 7, 22, 11, 5),
-                LocalDateTime.of(2026, 7, 23, 12, 0)
+                secondAppliedAt,
+                secondNextContactAt,
+                "Technical interview scheduled",
+                secondCreatedAt,
+                secondUpdatedAt
         );
 
-        when(applicationService.getAllApplications())
-                .thenReturn(List.of(firstApplication, secondApplication));
-        when(applicationMapper.toResponse(firstApplication))
-                .thenReturn(firstResponse);
-        when(applicationMapper.toResponse(secondApplication))
-                .thenReturn(secondResponse);
+        List<ApplicationResponse> content = List.of(
+                firstResponse,
+                secondResponse
+        );
 
-        mockMvc.perform(get("/api/applications"))
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        content,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(page, size))
+                .thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size)))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(firstResponse.id()))
-                .andExpect(jsonPath("$[0].vacancyId").value(firstResponse.vacancyId()))
-                .andExpect(jsonPath("$[0].status")
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(firstResponse.id()))
+                .andExpect(jsonPath("$.content[0].status")
                         .value(firstResponse.status().name()))
-                .andExpect(jsonPath("$[1].id").value(secondResponse.id()))
-                .andExpect(jsonPath("$[1].vacancyId").value(secondResponse.vacancyId()))
-                .andExpect(jsonPath("$[1].status")
-                        .value(secondResponse.status().name()));
+                .andExpect(jsonPath("$.content[1].id").value(secondResponse.id()))
+                .andExpect(jsonPath("$.content[1].status")
+                        .value(secondResponse.status().name()))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size))
+                .andExpect(jsonPath("$.totalElements").value(totalElements))
+                .andExpect(jsonPath("$.totalPages").value(totalPages));
 
-        verify(applicationService).getAllApplications();
-        verify(applicationMapper).toResponse(firstApplication);
-        verify(applicationMapper).toResponse(secondApplication);
+        verify(applicationService).getAllApplications(page, size);
+        verifyNoInteractions(applicationMapper);
     }
 
     @Test
@@ -672,5 +698,103 @@ class ApplicationControllerTest {
 
         verify(applicationService).updateApplicationStatus(applicationId, request);
         verify(applicationMapper).toResponse(application);
+    }
+
+    @Test
+    void shouldUseDefaultPaginationParameters() throws Exception {
+        int defaultPage = 0;
+        int defaultSize = 10;
+        long totalElements = 0;
+        int totalPages = 0;
+
+        List<ApplicationResponse> content = List.of();
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        content,
+                        defaultPage,
+                        defaultSize,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(defaultPage, defaultSize))
+                .thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/api/applications"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page").value(defaultPage))
+                .andExpect(jsonPath("$.size").value(defaultSize))
+                .andExpect(jsonPath("$.totalElements").value(totalElements))
+                .andExpect(jsonPath("$.totalPages").value(totalPages));
+
+        verify(applicationService).getAllApplications(defaultPage, defaultSize);
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectNegativePage() throws Exception {
+        int invalidPage = -1;
+        int validSize = 10;
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(invalidPage))
+                        .param("size", String.valueOf(validSize)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("must be greater than or equal to 0"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldRejectZeroPageSize() throws Exception {
+        int validPage = 0;
+        int invalidSize = 0;
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(validPage))
+                        .param("size", String.valueOf(invalidSize)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("must be greater than or equal to 1"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldRejectPageSizeAboveMaximum() throws Exception {
+        int validPage = 0;
+        int invalidSize = 101;
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(validPage))
+                        .param("size", String.valueOf(invalidSize)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message")
+                        .value("must be less than or equal to 100"))
+                .andExpect(jsonPath("$.path").value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors").isMap())
+                .andExpect(jsonPath("$.fieldErrors").isEmpty());
+
+        verifyNoInteractions(applicationService, applicationMapper);
     }
 }
