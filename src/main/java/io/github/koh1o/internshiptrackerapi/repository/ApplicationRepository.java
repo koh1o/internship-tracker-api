@@ -11,4 +11,15 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             ApplicationStatus status,
             Pageable pageable
     );
+
+    Page<Application> findAllByVacancy_Id(
+            Long vacancyId,
+            Pageable pageable
+    );
+
+    Page<Application> findAllByStatusAndVacancy_Id(
+            ApplicationStatus status,
+            Long vacancyId,
+            Pageable pageable
+    );
 }

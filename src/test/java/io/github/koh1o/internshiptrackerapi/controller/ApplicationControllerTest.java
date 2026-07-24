@@ -234,6 +234,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -261,6 +262,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -740,6 +742,7 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -758,6 +761,7 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -843,6 +847,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -866,6 +871,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -888,6 +894,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -911,6 +918,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -957,7 +965,8 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status
+                status,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -981,7 +990,8 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status
+                status,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1003,5 +1013,152 @@ class ApplicationControllerTest {
                 .andExpect(jsonPath("$.fieldErrors").isEmpty());
 
         verifyNoInteractions(applicationService, applicationMapper);
+    }
+
+    @Test
+    void shouldGetApplicationsFilteredByVacancyId() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        ApplicationStatus status = null;
+        Long vacancyId = 20L;
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                vacancyId,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                ApplicationStatus.INTERVIEW,
+                LocalDateTime.of(2026, 7, 20, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Technical interview scheduled",
+                LocalDateTime.of(2026, 7, 20, 10, 5),
+                LocalDateTime.of(2026, 7, 22, 12, 0)
+        );
+
+        List<ApplicationResponse> content = List.of(response);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        content,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction)
+                        .param("vacancyId", String.valueOf(vacancyId)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].vacancyId").value(vacancyId))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(response.id()))
+                .andExpect(jsonPath("$.content[0].status").value(response.status().name()))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size))
+                .andExpect(jsonPath("$.totalElements").value(totalElements))
+                .andExpect(jsonPath("$.totalPages").value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldGetApplicationsFilteredByStatusAndVacancyId() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        ApplicationStatus status = ApplicationStatus.INTERVIEW;
+        Long vacancyId = 20L;
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse response = new ApplicationResponse(
+                30L,
+                vacancyId,
+                "Java Backend Intern",
+                5L,
+                "Example Company",
+                status,
+                LocalDateTime.of(2026, 7, 20, 10, 0),
+                LocalDateTime.of(2026, 7, 28, 10, 0),
+                "Technical interview scheduled",
+                LocalDateTime.of(2026, 7, 20, 10, 5),
+                LocalDateTime.of(2026, 7, 22, 12, 0)
+        );
+
+        List<ApplicationResponse> content = List.of(response);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        content,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction)
+                        .param("status", status.name())
+                        .param("vacancyId", String.valueOf(vacancyId)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[0].vacancyId").value(vacancyId))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(response.id()))
+                .andExpect(jsonPath("$.content[0].status").value(status.name()))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size))
+                .andExpect(jsonPath("$.totalElements").value(totalElements))
+                .andExpect(jsonPath("$.totalPages").value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId
+        );
+        verifyNoInteractions(applicationMapper);
     }
 }

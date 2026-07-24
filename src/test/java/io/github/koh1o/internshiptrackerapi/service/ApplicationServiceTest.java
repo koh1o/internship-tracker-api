@@ -29,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -937,5 +939,151 @@ class ApplicationServiceTest {
         verify(applicationRepository, never()).findAll(pageable);
         verify(applicationMapper).toResponse(firstApplication);
         verify(applicationMapper).toResponse(secondApplication);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByVacancyId() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        Long vacancyId = 20L;
+        long totalElements = 2;
+
+        Sort.Direction sortDirection = Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Application firstApplication = mock(Application.class);
+        Application secondApplication = mock(Application.class);
+
+        ApplicationResponse firstResponse =
+                mock(ApplicationResponse.class);
+        ApplicationResponse secondResponse =
+                mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        List<ApplicationResponse> expectedContent = List.of(
+                firstResponse,
+                secondResponse
+        );
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                applications,
+                pageable,
+                totalElements
+        );
+
+        when(applicationRepository.findAllByVacancy_Id(vacancyId, pageable))
+                .thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        null,
+                        vacancyId
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+
+        verify(applicationRepository).findAllByVacancy_Id(vacancyId, pageable);
+        verify(applicationRepository, never())
+                .findAllByStatusAndVacancy_Id(
+                        any(ApplicationStatus.class),
+                        anyLong(),
+                        any(Pageable.class)
+                );
+        verify(applicationRepository, never()).findAll(pageable);
+
+        verify(applicationRepository, never())
+                .findAllByStatus(
+                        any(ApplicationStatus.class),
+                        eq(pageable)
+                );
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByStatusAndVacancyId() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+        ApplicationStatus status = ApplicationStatus.INTERVIEW;
+        Long vacancyId = 20L;
+        long totalElements = 1;
+
+        Sort.Direction sortDirection = Sort.Direction.DESC;
+        Sort sort = Sort.by(sortDirection, sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Application application = mock(Application.class);
+        ApplicationResponse response =
+                mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(application);
+        List<ApplicationResponse> expectedContent =
+                List.of(response);
+
+        Page<Application> repositoryPage = new PageImpl<>(
+                applications,
+                pageable,
+                totalElements
+        );
+
+        when(applicationRepository.findAllByStatusAndVacancy_Id(
+                status,
+                vacancyId,
+                pageable
+        )).thenReturn(repositoryPage);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(response);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        status,
+                        vacancyId
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(repositoryPage.getNumber(), result.page());
+        assertEquals(repositoryPage.getSize(), result.size());
+        assertEquals(repositoryPage.getTotalElements(), result.totalElements());
+        assertEquals(repositoryPage.getTotalPages(), result.totalPages());
+
+        verify(applicationRepository, never()).findAllByVacancy_Id(vacancyId, pageable);
+        verify(applicationRepository)
+                .findAllByStatusAndVacancy_Id(
+                        status,
+                        vacancyId,
+                        pageable
+                );
+        verify(applicationRepository, never()).findAll(pageable);
+        verify(applicationRepository, never())
+                .findAllByStatus(
+                        any(ApplicationStatus.class),
+                        any(Pageable.class)
+                );
+        verify(applicationMapper).toResponse(application);
     }
 }

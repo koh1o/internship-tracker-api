@@ -235,7 +235,24 @@ public class ApplicationService {
             String direction,
             ApplicationStatus status
     ) {
+        return getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                null
+        );
+    }
 
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationStatus status,
+            Long vacancyId
+    ) {
         if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
             throw new InvalidApplicationDataException(
                     "Unsupported sort field: " + sortBy
@@ -260,13 +277,25 @@ public class ApplicationService {
 
         Page<Application> applicationPage;
 
-        if (status == null) {
+        if (status == null && vacancyId == null) {
             applicationPage = applicationRepository.findAll(pageable);
-        } else {
+        } else if (status != null && vacancyId == null) {
             applicationPage = applicationRepository.findAllByStatus(
                     status,
                     pageable
             );
+        } else if (status == null) {
+            applicationPage = applicationRepository.findAllByVacancy_Id(
+                    vacancyId,
+                    pageable
+            );
+        } else {
+            applicationPage =
+                    applicationRepository.findAllByStatusAndVacancy_Id(
+                            status,
+                            vacancyId,
+                            pageable
+                    );
         }
 
         List<ApplicationResponse> content = applicationPage.getContent()

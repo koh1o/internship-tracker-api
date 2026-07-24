@@ -65,14 +65,17 @@ public class ApplicationController {
 
             @RequestParam(defaultValue = "DESC") String direction,
 
-            @RequestParam(required = false) ApplicationStatus status
+            @RequestParam(required = false) ApplicationStatus status,
+
+            @RequestParam(required = false) Long vacancyId
     ) {
         return applicationService.getAllApplications(
                 page,
                 size,
                 sortBy,
                 direction,
-                status
+                status,
+                vacancyId
         );
     }
 
