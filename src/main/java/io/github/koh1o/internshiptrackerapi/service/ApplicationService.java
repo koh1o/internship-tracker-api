@@ -13,10 +13,12 @@ import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.repository.ApplicationRepository;
 import io.github.koh1o.internshiptrackerapi.repository.VacancyRepository;
+import io.github.koh1o.internshiptrackerapi.specification.ApplicationSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -260,6 +262,7 @@ public class ApplicationService {
         }
 
         Sort.Direction sortDirection;
+
         try {
             sortDirection = Sort.Direction.fromString(direction);
         } catch (IllegalArgumentException exception) {
@@ -267,7 +270,11 @@ public class ApplicationService {
                     "Unsupported sort direction: " + direction
             );
         }
-        Sort sort = Sort.by(sortDirection, sortBy);
+
+        Sort sort = Sort.by(
+                sortDirection,
+                sortBy
+        );
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -275,33 +282,23 @@ public class ApplicationService {
                 sort
         );
 
-        Page<Application> applicationPage;
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(
+                        status,
+                        vacancyId
+                );
 
-        if (status == null && vacancyId == null) {
-            applicationPage = applicationRepository.findAll(pageable);
-        } else if (status != null && vacancyId == null) {
-            applicationPage = applicationRepository.findAllByStatus(
-                    status,
-                    pageable
-            );
-        } else if (status == null) {
-            applicationPage = applicationRepository.findAllByVacancy_Id(
-                    vacancyId,
-                    pageable
-            );
-        } else {
-            applicationPage =
-                    applicationRepository.findAllByStatusAndVacancy_Id(
-                            status,
-                            vacancyId,
-                            pageable
-                    );
-        }
+        Page<Application> applicationPage =
+                applicationRepository.findAll(
+                        specification,
+                        pageable
+                );
 
-        List<ApplicationResponse> content = applicationPage.getContent()
-                .stream()
-                .map(applicationMapper::toResponse)
-                .toList();
+        List<ApplicationResponse> content =
+                applicationPage.getContent()
+                        .stream()
+                        .map(applicationMapper::toResponse)
+                        .toList();
 
         return new PagedResponse<>(
                 content,
