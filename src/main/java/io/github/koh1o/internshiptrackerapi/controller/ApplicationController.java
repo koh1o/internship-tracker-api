@@ -12,6 +12,7 @@ import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/applications")
@@ -69,7 +72,15 @@ public class ApplicationController {
 
             @RequestParam(required = false) Long vacancyId,
 
-            @RequestParam(required = false) Long companyId
+            @RequestParam(required = false) Long companyId,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime appliedAtFrom,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime appliedAtTo
     ) {
         return applicationService.getAllApplications(
                 page,
@@ -78,7 +89,9 @@ public class ApplicationController {
                 direction,
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
         );
     }
 

@@ -1338,4 +1338,131 @@ class ApplicationServiceTest {
         verify(applicationMapper).toResponse(firstApplication);
         verify(applicationMapper).toResponse(secondApplication);
     }
+
+    @Test
+    void shouldReturnApplicationsFilteredByAppliedAtRange() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "appliedAt";
+        String direction = "ASC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        long totalElements = 1;
+
+        Sort sort = Sort.by(
+                Sort.Direction.ASC,
+                sortBy
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Application application =
+                mock(Application.class);
+
+        ApplicationResponse applicationResponse =
+                mock(ApplicationResponse.class);
+
+        List<ApplicationResponse> expectedContent =
+                List.of(applicationResponse);
+
+        List<Application> applications =
+                List.of(application);
+
+        Page<Application> applicationPage =
+                new PageImpl<>(
+                        applications,
+                        pageable,
+                        totalElements
+                );
+
+        when(applicationRepository.findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        )).thenReturn(applicationPage);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(applicationResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(applicationPage.getNumber(), result.page());
+        assertEquals(applicationPage.getSize(), result.size());
+        assertEquals(
+                applicationPage.getTotalElements(),
+                result.totalElements()
+        );
+        assertEquals(
+                applicationPage.getTotalPages(),
+                result.totalPages()
+        );
+
+        verify(applicationRepository).findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        );
+        verify(applicationMapper).toResponse(application);
+    }
+
+    @Test
+    void shouldRejectInvalidAppliedAtRange() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "appliedAt";
+        String direction = "ASC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo
+                ));
+
+        assertEquals(
+                "Applied at from must not be after applied at to",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(applicationRepository, applicationMapper);
+    }
 }

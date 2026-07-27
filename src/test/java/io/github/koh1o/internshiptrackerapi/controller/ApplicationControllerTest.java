@@ -236,6 +236,8 @@ class ApplicationControllerTest {
                 direction,
                 null,
                 null,
+                null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -263,6 +265,8 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
+                null,
                 null,
                 null,
                 null
@@ -746,6 +750,8 @@ class ApplicationControllerTest {
                 defaultDirection,
                 null,
                 null,
+                null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -764,6 +770,8 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
+                null,
+                null,
                 null,
                 null,
                 null
@@ -853,6 +861,8 @@ class ApplicationControllerTest {
                 direction,
                 null,
                 null,
+                null,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -876,6 +886,8 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
+                null,
                 null,
                 null,
                 null
@@ -902,6 +914,8 @@ class ApplicationControllerTest {
                 direction,
                 null,
                 null,
+                null,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -925,6 +939,8 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
+                null,
                 null,
                 null,
                 null
@@ -975,6 +991,8 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 null,
+                null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1000,6 +1018,8 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
+                null,
+                null,
                 null,
                 null
         );
@@ -1068,6 +1088,8 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1095,6 +1117,8 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -1143,6 +1167,8 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1171,6 +1197,8 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -1221,19 +1249,21 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                null,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
-                get("/api/applications")
-                        .param("page", String.valueOf(page))
-                        .param("size", String.valueOf(size))
-                        .param("sortBy", sortBy)
-                        .param("direction", direction)
-                        .param(
-                                "companyId",
-                                String.valueOf(companyId)
-                        ))
+                        get("/api/applications")
+                                .param("page", String.valueOf(page))
+                                .param("size", String.valueOf(size))
+                                .param("sortBy", sortBy)
+                                .param("direction", direction)
+                                .param(
+                                        "companyId",
+                                        String.valueOf(companyId)
+                                ))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content.length()").value(1))
@@ -1247,7 +1277,9 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                null,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1299,24 +1331,26 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                null,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
-                get("/api/applications")
-                        .param("page", String.valueOf(page))
-                        .param("size", String.valueOf(size))
-                        .param("sortBy", sortBy)
-                        .param("direction", direction)
-                        .param("status", status.name())
-                        .param(
-                                "vacancyId",
-                                String.valueOf(vacancyId)
-                        )
-                        .param(
-                                "companyId",
-                                String.valueOf(companyId)
-                        ))
+                        get("/api/applications")
+                                .param("page", String.valueOf(page))
+                                .param("size", String.valueOf(size))
+                                .param("sortBy", sortBy)
+                                .param("direction", direction)
+                                .param("status", status.name())
+                                .param(
+                                        "vacancyId",
+                                        String.valueOf(vacancyId)
+                                )
+                                .param(
+                                        "companyId",
+                                        String.valueOf(companyId)
+                                ))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content.length()").value(1))
@@ -1330,7 +1364,198 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                null,
+                null
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByAppliedAtRange()
+            throws Exception {
+
+        int page = 0;
+        int size = 10;
+        String sortBy = "appliedAt";
+        String direction = "ASC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse applicationResponse =
+                new ApplicationResponse(
+                        30L,
+                        20L,
+                        "Java Backend Intern",
+                        5L,
+                        "Example Company",
+                        ApplicationStatus.INTERVIEW,
+                        LocalDateTime.of(2026, 7, 15, 10, 0),
+                        LocalDateTime.of(2026, 7, 20, 10, 0),
+                        "Technical interview scheduled",
+                        LocalDateTime.of(2026, 7, 15, 10, 5),
+                        LocalDateTime.of(2026, 7, 16, 12, 0)
+                );
+
+        List<ApplicationResponse> responseContent =
+                List.of(applicationResponse);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        responseContent,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param("page", String.valueOf(page))
+                                .param("size", String.valueOf(size))
+                                .param("sortBy", sortBy)
+                                .param("direction", direction)
+                                .param(
+                                        "appliedAtFrom",
+                                        appliedAtFrom.toString()
+                                )
+                                .param(
+                                        "appliedAtTo",
+                                        appliedAtTo.toString()
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.content.length()")
+                        .value(1))
+                .andExpect(jsonPath("$.content[0].id")
+                        .value(applicationResponse.id()))
+                .andExpect(jsonPath("$.content[0].appliedAt")
+                        .value("2026-07-15T10:00:00"))
+                .andExpect(jsonPath("$.page")
+                        .value(page))
+                .andExpect(jsonPath("$.size")
+                        .value(size))
+                .andExpect(jsonPath("$.totalElements")
+                        .value(totalElements))
+                .andExpect(jsonPath("$.totalPages")
+                        .value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
+        );
+
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectInvalidAppliedAtRange() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        String errorMessage =
+                "Applied at from must not be after applied at to";
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        errorMessage
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
+        )).thenThrow(exception);
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param(
+                                        "appliedAtFrom",
+                                        appliedAtFrom.toString()
+                                )
+                                .param(
+                                        "appliedAtTo",
+                                        appliedAtTo.toString()
+                                )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.status")
+                        .value(400))
+                .andExpect(jsonPath("$.error")
+                        .value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value(errorMessage))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors")
+                        .isEmpty());
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
         );
         verifyNoInteractions(applicationMapper);
     }

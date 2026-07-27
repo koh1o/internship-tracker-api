@@ -271,6 +271,30 @@ public class ApplicationService {
             Long vacancyId,
             Long companyId
     ) {
+        return getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                null,
+                null
+        );
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId,
+            LocalDateTime appliedAtFrom,
+            LocalDateTime appliedAtTo
+    ) {
         Sort.Direction sortDirection;
 
         Sort sort;
@@ -308,10 +332,22 @@ public class ApplicationService {
                 sort
         );
 
+        if (
+                appliedAtFrom != null
+                        && appliedAtTo != null
+                        && appliedAtFrom.isAfter(appliedAtTo)
+        ) {
+            throw new InvalidApplicationDataException(
+                    "Applied at from must not be after applied at to"
+            );
+        }
+
         specification = ApplicationSpecifications.withFilters(
                 status,
                 vacancyId,
-                companyId
+                companyId,
+                appliedAtFrom,
+                appliedAtTo
         );
 
         applicationPage = applicationRepository.findAll(

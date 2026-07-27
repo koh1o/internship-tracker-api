@@ -12,6 +12,8 @@ import jakarta.persistence.criteria.Root;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -463,5 +465,178 @@ class ApplicationSpecificationsTest {
         verify(criteriaBuilder).equal(vacancyIdPath, vacancyId);
         verify(criteriaBuilder).and(statusPredicate, vacancyPredicate);
         verify(criteriaBuilder).and(statusAndVacancyPredicate, companyPredicate);
+    }
+
+    @Test
+    void shouldCreateAppliedAtFromSpecification() {
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<LocalDateTime> appliedAtPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<LocalDateTime>get("appliedAt"))
+                .thenReturn(appliedAtPath);
+        when(criteriaBuilder.greaterThanOrEqualTo(
+                appliedAtPath,
+                appliedAtFrom
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasAppliedAtFrom(
+                        appliedAtFrom
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+        verify(root).get("appliedAt");
+        verify(criteriaBuilder).greaterThanOrEqualTo(
+                appliedAtPath,
+                appliedAtFrom
+        );
+    }
+
+    @Test
+    void shouldCreateAppliedAtToSpecification() {
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<LocalDateTime> appliedAtPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<LocalDateTime>get("appliedAt"))
+                .thenReturn(appliedAtPath);
+        when(criteriaBuilder.lessThanOrEqualTo(
+                appliedAtPath,
+                appliedAtTo
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasAppliedAtTo(
+                        appliedAtTo
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+
+        verify(root).get("appliedAt");
+        verify(criteriaBuilder).lessThanOrEqualTo(
+                appliedAtPath,
+                appliedAtTo
+        );
+    }
+
+    @Test
+    void shouldCreateSpecificationForAppliedAtRange() {
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 7, 1, 0, 0);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 7, 31, 23, 59);
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<LocalDateTime> appliedAtPath =
+                mock(Path.class);
+
+        Predicate fromPredicate =
+                mock(Predicate.class);
+
+        Predicate toPredicate =
+                mock(Predicate.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<LocalDateTime>get("appliedAt"))
+                .thenReturn(appliedAtPath);
+        when(criteriaBuilder.greaterThanOrEqualTo(
+                appliedAtPath,
+                appliedAtFrom
+        )).thenReturn(fromPredicate);
+        when(criteriaBuilder.lessThanOrEqualTo(
+                appliedAtPath,
+                appliedAtTo
+        )).thenReturn(toPredicate);
+        when(criteriaBuilder.and(
+                fromPredicate,
+                toPredicate
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+        verify(root, times(2)).get("appliedAt");
+        verify(criteriaBuilder).greaterThanOrEqualTo(
+                appliedAtPath,
+                appliedAtFrom
+        );
+
+        verify(criteriaBuilder).lessThanOrEqualTo(
+                appliedAtPath,
+                appliedAtTo
+        );
+        verify(criteriaBuilder).and(
+                fromPredicate,
+                toPredicate
+        );
     }
 }

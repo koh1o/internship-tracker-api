@@ -7,6 +7,8 @@ import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
 import jakarta.persistence.criteria.Path;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
+
 public final class ApplicationSpecifications {
 
     private ApplicationSpecifications() {
@@ -48,6 +50,33 @@ public final class ApplicationSpecifications {
             Long vacancyId,
             Long companyId
     ) {
+        return withFilters(
+                status,
+                vacancyId,
+                companyId,
+                null,
+                null
+        );
+    }
+
+    public static Specification<Application> withFilters(
+            ApplicationStatus status,
+            Long vacancyId
+    ) {
+        return withFilters(
+                status,
+                vacancyId,
+                null
+        );
+    }
+
+    public static Specification<Application> withFilters(
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId,
+            LocalDateTime appliedAtFrom,
+            LocalDateTime appliedAtTo
+    ) {
         Specification<Application> specification =
                 Specification.unrestricted();
 
@@ -69,18 +98,19 @@ public final class ApplicationSpecifications {
             );
         }
 
-        return specification;
-    }
+        if (appliedAtFrom != null) {
+            specification = specification.and(
+                    hasAppliedAtFrom(appliedAtFrom)
+            );
+        }
 
-    public static Specification<Application> withFilters(
-            ApplicationStatus status,
-            Long vacancyId
-    ) {
-        return withFilters(
-                status,
-                vacancyId,
-                null
-        );
+        if (appliedAtTo != null) {
+            specification = specification.and(
+                    hasAppliedAtTo(appliedAtTo)
+            );
+        }
+
+        return specification;
     }
 
     public static Specification<Application> hasCompanyId(
@@ -98,6 +128,34 @@ public final class ApplicationSpecifications {
 
             return criteriaBuilder.equal(
                     companyIdPath, companyId
+            );
+        };
+    }
+
+    public static Specification<Application> hasAppliedAtFrom(
+            LocalDateTime appliedAtFrom
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<LocalDateTime> appliedAtPath =
+                    root.get("appliedAt");
+
+            return criteriaBuilder.greaterThanOrEqualTo(
+                    appliedAtPath,
+                    appliedAtFrom
+            );
+        };
+    }
+
+    public static Specification<Application> hasAppliedAtTo(
+            LocalDateTime appliedAtTo
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<LocalDateTime> appliedAtPath =
+                    root.get("appliedAt");
+
+            return criteriaBuilder.lessThanOrEqualTo(
+                    appliedAtPath,
+                    appliedAtTo
             );
         };
     }
