@@ -186,25 +186,21 @@ public class ApplicationService {
             ApplicationStatus newStatus
     ) {
         boolean allowed = switch (currentStatus) {
-            case PLANNED ->
-                    newStatus == ApplicationStatus.APPLIED
-                            || newStatus == ApplicationStatus.WITHDRAWN;
+            case PLANNED -> newStatus == ApplicationStatus.APPLIED
+                    || newStatus == ApplicationStatus.WITHDRAWN;
 
-            case APPLIED ->
-                    newStatus == ApplicationStatus.TEST_TASK
-                            || newStatus == ApplicationStatus.INTERVIEW
-                            || newStatus == ApplicationStatus.REJECTED
-                            || newStatus == ApplicationStatus.WITHDRAWN;
+            case APPLIED -> newStatus == ApplicationStatus.TEST_TASK
+                    || newStatus == ApplicationStatus.INTERVIEW
+                    || newStatus == ApplicationStatus.REJECTED
+                    || newStatus == ApplicationStatus.WITHDRAWN;
 
-            case TEST_TASK ->
-                    newStatus == ApplicationStatus.INTERVIEW
-                            || newStatus == ApplicationStatus.REJECTED
-                            || newStatus == ApplicationStatus.WITHDRAWN;
+            case TEST_TASK -> newStatus == ApplicationStatus.INTERVIEW
+                    || newStatus == ApplicationStatus.REJECTED
+                    || newStatus == ApplicationStatus.WITHDRAWN;
 
-            case INTERVIEW ->
-                    newStatus == ApplicationStatus.OFFER
-                            || newStatus == ApplicationStatus.REJECTED
-                            || newStatus == ApplicationStatus.WITHDRAWN;
+            case INTERVIEW -> newStatus == ApplicationStatus.OFFER
+                    || newStatus == ApplicationStatus.REJECTED
+                    || newStatus == ApplicationStatus.WITHDRAWN;
 
             case OFFER, REJECTED, WITHDRAWN -> false;
         };
@@ -255,13 +251,43 @@ public class ApplicationService {
             ApplicationStatus status,
             Long vacancyId
     ) {
+        return getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                null
+        );
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId
+    ) {
+        Sort.Direction sortDirection;
+
+        Sort sort;
+
+        Pageable pageable;
+
+        Specification<Application> specification;
+
+        Page<Application> applicationPage;
+
+        List<ApplicationResponse> content;
+
         if (sortBy == null || !ALLOWED_SORT_FIELDS.contains(sortBy)) {
             throw new InvalidApplicationDataException(
                     "Unsupported sort field: " + sortBy
             );
         }
-
-        Sort.Direction sortDirection;
 
         try {
             sortDirection = Sort.Direction.fromString(direction);
@@ -271,34 +297,31 @@ public class ApplicationService {
             );
         }
 
-        Sort sort = Sort.by(
+        sort = Sort.by(
                 sortDirection,
                 sortBy
         );
 
-        Pageable pageable = PageRequest.of(
+        pageable = PageRequest.of(
                 page,
                 size,
                 sort
         );
 
-        Specification<Application> specification =
-                ApplicationSpecifications.withFilters(
-                        status,
-                        vacancyId
-                );
+        specification = ApplicationSpecifications.withFilters(
+                status,
+                vacancyId,
+                companyId
+        );
 
-        Page<Application> applicationPage =
-                applicationRepository.findAll(
-                        specification,
-                        pageable
-                );
-
-        List<ApplicationResponse> content =
-                applicationPage.getContent()
-                        .stream()
-                        .map(applicationMapper::toResponse)
-                        .toList();
+        applicationPage = applicationRepository.findAll(
+                specification,
+                pageable
+        );
+        content = applicationPage.getContent()
+                .stream()
+                .map(applicationMapper::toResponse)
+                .toList();
 
         return new PagedResponse<>(
                 content,

@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.specification;
 
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
 import jakarta.persistence.criteria.Path;
 import org.springframework.data.jpa.domain.Specification;
@@ -44,7 +45,8 @@ public final class ApplicationSpecifications {
 
     public static Specification<Application> withFilters(
             ApplicationStatus status,
-            Long vacancyId
+            Long vacancyId,
+            Long companyId
     ) {
         Specification<Application> specification =
                 Specification.unrestricted();
@@ -61,6 +63,42 @@ public final class ApplicationSpecifications {
             );
         }
 
+        if (companyId != null) {
+            specification = specification.and(
+                    hasCompanyId(companyId)
+            );
+        }
+
         return specification;
+    }
+
+    public static Specification<Application> withFilters(
+            ApplicationStatus status,
+            Long vacancyId
+    ) {
+        return withFilters(
+                status,
+                vacancyId,
+                null
+        );
+    }
+
+    public static Specification<Application> hasCompanyId(
+            Long companyId
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<Vacancy> vacancyPath =
+                    root.get("vacancy");
+
+            Path<Company> companyPath =
+                    vacancyPath.get("company");
+
+            Path<Long> companyIdPath =
+                    companyPath.get("id");
+
+            return criteriaBuilder.equal(
+                    companyIdPath, companyId
+            );
+        };
     }
 }

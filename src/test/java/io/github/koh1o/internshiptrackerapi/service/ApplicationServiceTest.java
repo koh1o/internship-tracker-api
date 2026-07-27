@@ -1244,4 +1244,98 @@ class ApplicationServiceTest {
 
         verify(applicationMapper).toResponse(application);
     }
+
+    @Test
+    void shouldReturnApplicationsFilteredByCompanyId() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = 5L;
+
+        long totalElements = 2;
+
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                sortBy
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Application firstApplication =
+                mock(Application.class);
+
+        Application secondApplication =
+                mock(Application.class);
+
+        ApplicationResponse firstResponse =
+                mock(ApplicationResponse.class);
+
+        ApplicationResponse secondResponse =
+                mock(ApplicationResponse.class);
+
+        List<Application> applications = List.of(
+                firstApplication,
+                secondApplication
+        );
+
+        List<ApplicationResponse> expectedContent = List.of(
+                firstResponse,
+                secondResponse
+        );
+
+        Page<Application> applicationPage =
+                new PageImpl<>(
+                        applications,
+                        pageable,
+                        totalElements
+                );
+
+        when(applicationRepository.findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        )).thenReturn(applicationPage);
+        when(applicationMapper.toResponse(firstApplication))
+                .thenReturn(firstResponse);
+        when(applicationMapper.toResponse(secondApplication))
+                .thenReturn(secondResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        status,
+                        vacancyId,
+                        companyId
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(applicationPage.getNumber(), result.page());
+        assertEquals(applicationPage.getSize(), result.size());
+        assertEquals(
+                applicationPage.getTotalElements(),
+                result.totalElements()
+        );
+        assertEquals(
+                applicationPage.getTotalPages(),
+                result.totalPages()
+        );
+
+        verify(applicationRepository).findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        );
+
+        verify(applicationMapper).toResponse(firstApplication);
+        verify(applicationMapper).toResponse(secondApplication);
+    }
 }

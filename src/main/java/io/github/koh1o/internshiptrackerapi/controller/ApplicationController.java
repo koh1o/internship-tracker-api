@@ -67,7 +67,9 @@ public class ApplicationController {
 
             @RequestParam(required = false) ApplicationStatus status,
 
-            @RequestParam(required = false) Long vacancyId
+            @RequestParam(required = false) Long vacancyId,
+
+            @RequestParam(required = false) Long companyId
     ) {
         return applicationService.getAllApplications(
                 page,
@@ -75,7 +77,8 @@ public class ApplicationController {
                 sortBy,
                 direction,
                 status,
-                vacancyId
+                vacancyId,
+                companyId
         );
     }
 

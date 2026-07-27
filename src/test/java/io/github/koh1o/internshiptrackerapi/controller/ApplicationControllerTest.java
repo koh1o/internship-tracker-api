@@ -235,6 +235,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -262,6 +263,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null
         );
@@ -743,6 +745,7 @@ class ApplicationControllerTest {
                 defaultSortBy,
                 defaultDirection,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -761,6 +764,7 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
+                null,
                 null,
                 null
         );
@@ -848,6 +852,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 null,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -872,6 +877,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 null,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -894,6 +900,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null
         )).thenThrow(exception);
@@ -918,6 +925,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null
         );
@@ -966,6 +974,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -991,6 +1000,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
@@ -1057,7 +1067,8 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
-                vacancyId
+                vacancyId,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -1083,7 +1094,8 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
-                vacancyId
+                vacancyId,
+                null
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1130,7 +1142,8 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
-                vacancyId
+                vacancyId,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -1157,7 +1170,167 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
-                vacancyId
+                vacancyId,
+                null
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByCompanyId() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = 5L;
+
+        ApplicationResponse applicationResponse =
+                new ApplicationResponse(
+                        30L,
+                        20L,
+                        "Java Backend Intern",
+                        companyId,
+                        "Example Company",
+                        ApplicationStatus.INTERVIEW,
+                        LocalDateTime.of(2026, 7, 20, 10, 0),
+                        LocalDateTime.of(2026, 7, 28, 10, 0),
+                        "Technical interview scheduled",
+                        LocalDateTime.of(2026, 7, 20, 10, 5),
+                        LocalDateTime.of(2026, 7, 22, 12, 0)
+                );
+
+        List<ApplicationResponse> responseContent =
+                List.of(applicationResponse);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        responseContent,
+                        page,
+                        size,
+                        1,
+                        1
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(
+                get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction)
+                        .param(
+                                "companyId",
+                                String.valueOf(companyId)
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByAllFilters() throws Exception {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status =
+                ApplicationStatus.INTERVIEW;
+
+        Long vacancyId = 20L;
+        Long companyId = 5L;
+
+        ApplicationResponse applicationResponse =
+                new ApplicationResponse(
+                        30L,
+                        20L,
+                        "Java Backend Intern",
+                        companyId,
+                        "Example Company",
+                        ApplicationStatus.INTERVIEW,
+                        LocalDateTime.of(2026, 7, 20, 10, 0),
+                        LocalDateTime.of(2026, 7, 28, 10, 0),
+                        "Technical interview scheduled",
+                        LocalDateTime.of(2026, 7, 20, 10, 5),
+                        LocalDateTime.of(2026, 7, 22, 12, 0)
+                );
+
+        List<ApplicationResponse> responseContent =
+                List.of(applicationResponse);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        responseContent,
+                        page,
+                        size,
+                        1,
+                        1
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(
+                get("/api/applications")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .param("sortBy", sortBy)
+                        .param("direction", direction)
+                        .param("status", status.name())
+                        .param(
+                                "vacancyId",
+                                String.valueOf(vacancyId)
+                        )
+                        .param(
+                                "companyId",
+                                String.valueOf(companyId)
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.page").value(page))
+                .andExpect(jsonPath("$.size").value(size));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId
         );
         verifyNoInteractions(applicationMapper);
     }
