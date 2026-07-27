@@ -2,9 +2,9 @@
 
 ## Актуальность файла
 
-Последнее обновление: **2026-07-24**.
+Последнее обновление: **2026-07-27**.
 
-Это актуальная стабильная точка проекта после завершения пагинации, сортировки и фильтрации списка `Application` по `status` и `vacancyId`.
+Это актуальная стабильная точка проекта после перехода фильтрации списка `Application` с нескольких derived query на Spring Data JPA `Specification`.
 
 В источниках проекта должен находиться только один файл с точным названием:
 
@@ -31,12 +31,14 @@ PROJECT_STATUS.md
 - необязательная фильтрация по `ApplicationStatus`;
 - необязательная фильтрация по `vacancyId`;
 - комбинация фильтров `status + vacancyId`;
+- динамическая сборка фильтров через `Specification<Application>`;
+- выполнение Specification через `JpaSpecificationExecutor<Application>`;
 - собственный DTO для paged response;
 - проверка параметров `page` и `size`;
 - проверка разрешённых полей и направлений сортировки;
 - преобразование строкового query-параметра в enum;
 - единый формат ошибок для method validation, сортировки и неверных enum-значений;
-- Service- и Controller-тесты всех четырёх комбинаций фильтров.
+- Service-, Controller- и Specification-тесты.
 
 Текущий крупный этап:
 
@@ -52,15 +54,23 @@ PROJECT_STATUS.md
 Фильтрация Application по status
 Фильтрация Application по vacancyId
 Комбинация status + vacancyId
+Переход от derived query к Specification
 ```
 
 Следующая часть этапа:
 
 ```text
-Подготовка масштабируемой фильтрации Application
+Расширение динамической фильтрации Application
 ```
 
-Следующий небольшой шаг — сравнить текущие derived query с `Specification` и подготовить переход к динамическому построению условий до добавления фильтров по компании и датам.
+Следующий небольшой шаг:
+
+```text
+Добавить Specification hasCompanyId(companyId)
+и unit-тест пути Application.vacancy.company.id
+```
+
+На первом подшаге не менять Controller и Service. Сначала реализовать и проверить только новое условие Specification.
 
 ---
 
@@ -69,13 +79,13 @@ PROJECT_STATUS.md
 Последний рабочий code-коммит:
 
 ```text
-2e92a60 Add Application vacancy filtering
+f802fa6 Replace application derived queries with specifications
 ```
 
 Последний documentation-коммит до обновления этого файла:
 
 ```text
-5003a51 Update project status after Application status filtering
+9fb78a0 Update project status after vacancy filtering
 ```
 
 Последние завершённые code-коммиты:
@@ -92,6 +102,7 @@ a76960f Add Application status transition rules
 9c77228 Add Application sorting
 3c75b4e Add Application status filtering
 2e92a60 Add Application vacancy filtering
+f802fa6 Replace application derived queries with specifications
 ```
 
 Состояние Git после отправки последнего code-коммита:
@@ -103,12 +114,12 @@ Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
 
-Всего в проекте **112 тестов**.
+Всего в проекте **118 тестов**.
 
 Последний полный запуск:
 
 ```text
-Tests run: 112
+Tests run: 118
 Failures: 0
 Errors: 0
 Skipped: 0
@@ -210,7 +221,7 @@ DELETE /api/vacancies/{id}
 
 ### Application
 
-Для `Application` завершены CRUD, основные бизнес-правила, пагинация, сортировка и два комбинируемых фильтра:
+Для `Application` завершены CRUD, основные бизнес-правила, пагинация, сортировка и динамическая фильтрация по двум параметрам:
 
 - [x] Enum `ApplicationStatus`.
 - [x] Статусы `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
@@ -252,16 +263,20 @@ DELETE /api/vacancies/{id}
 - [x] `status` в Controller имеет тип `ApplicationStatus`.
 - [x] Необязательный query-параметр `vacancyId`.
 - [x] `vacancyId` в Controller имеет тип `Long`.
-- [x] Без фильтров используется `findAll(pageable)`.
-- [x] Только с `status` используется `findAllByStatus(status, pageable)`.
-- [x] Только с `vacancyId` используется `findAllByVacancy_Id(vacancyId, pageable)`.
-- [x] С `status` и `vacancyId` используется `findAllByStatusAndVacancy_Id(status, vacancyId, pageable)`.
+- [x] Условия `hasStatus(...)` и `hasVacancyId(...)` создаются независимо.
+- [x] Отсутствующие фильтры не добавляют ограничения.
+- [x] Два фильтра объединяются через `and(...)`.
+- [x] Для начального состояния используется `Specification.unrestricted()`.
+- [x] Repository расширяет `JpaSpecificationExecutor<Application>`.
+- [x] Service вызывает один метод `findAll(specification, pageable)` для всех комбинаций фильтров.
+- [x] Старые фильтрующие derived query удалены.
 - [x] Все фильтры сохраняют пагинацию и сортировку.
 - [x] Неизвестное enum-значение возвращает управляемый `400 Bad Request`.
 - [x] `MethodArgumentTypeMismatchException` обрабатывается централизованно.
 - [x] При ошибке преобразования enum Service и Mapper не вызываются.
-- [x] Service-тесты покрывают фильтр только по `vacancyId` и комбинацию `status + vacancyId`.
-- [x] Controller-тесты покрывают фильтр только по `vacancyId` и комбинацию `status + vacancyId`.
+- [x] Specification-тесты покрывают отсутствие фильтров, каждый фильтр отдельно и их комбинацию.
+- [x] Service-тесты используют `findAll(Specification, Pageable)`.
+- [x] Controller-тесты сохраняют прежний HTTP-контракт.
 
 Endpoint:
 
@@ -394,18 +409,6 @@ totalElements
 totalPages
 ```
 
-Пример:
-
-```json
-{
-  "content": [],
-  "page": 0,
-  "size": 10,
-  "totalElements": 0,
-  "totalPages": 0
-}
-```
-
 ### Поток выполнения
 
 ```text
@@ -415,7 +418,8 @@ ApplicationController
 → преобразование direction в Sort.Direction
 → Sort.by(sortDirection, sortBy)
 → PageRequest.of(page, size, sort)
-→ выбор Repository-метода по наличию фильтров
+→ ApplicationSpecifications.withFilters(status, vacancyId)
+→ applicationRepository.findAll(specification, pageable)
 → Page<Application>
 → ApplicationMapper.toResponse(...)
 → PagedResponse<ApplicationResponse>
@@ -430,7 +434,10 @@ ApplicationController
 - Controller получает готовый `PagedResponse<ApplicationResponse>`.
 - Controller не выполняет маппинг страницы.
 - Страница за пределами данных возвращает пустой `content`, а не `404`.
-- Один и тот же подготовленный `Pageable` используется во всех ветках фильтрации.
+- Один и тот же подготовленный `Pageable` передаётся в Repository вместе со Specification.
+- Controller не знает, как строятся условия фильтрации.
+- Service не содержит веток по всем комбинациям фильтров.
+- Repository не содержит отдельный метод для каждой комбинации фильтров.
 
 ### Валидация параметров
 
@@ -445,22 +452,7 @@ int page
 int size
 ```
 
-Нарушение ограничения вызывает:
-
-```text
-HandlerMethodValidationException
-```
-
-`GlobalExceptionHandler` преобразует его в единый `ErrorResponse`.
-
-Проверены сценарии:
-
-- обычная непустая страница;
-- пустая страница;
-- параметры по умолчанию;
-- `page=-1`;
-- `size=0`;
-- `size=101`.
+Нарушение ограничения вызывает `HandlerMethodValidationException`, который преобразуется в единый `ErrorResponse`.
 
 ### Сортировка
 
@@ -473,11 +465,7 @@ String direction
 → PageRequest.of(page, size, sort)
 ```
 
-В `ApplicationService` используется allow-list:
-
-```text
-ALLOWED_SORT_FIELDS
-```
+В `ApplicationService` используется allow-list `ALLOWED_SORT_FIELDS`.
 
 Неизвестное поле вызывает:
 
@@ -486,102 +474,68 @@ InvalidApplicationDataException
 Unsupported sort field: unknownField
 ```
 
-Неверное направление преобразуется в проектное исключение:
+Неверное направление вызывает:
 
 ```text
 InvalidApplicationDataException
 Unsupported sort direction: SIDEWAYS
 ```
 
-Общий обработчик всех `IllegalArgumentException` не добавлялся, чтобы не скрывать программные ошибки.
+### Динамическая фильтрация через Specification
 
-### Фильтрация по status
-
-Controller принимает:
+`ApplicationRepository`:
 
 ```java
-@RequestParam(required = false)
-ApplicationStatus status
+public interface ApplicationRepository
+        extends JpaRepository<Application, Long>,
+                JpaSpecificationExecutor<Application> {
+}
 ```
 
-Spring MVC преобразует строку query-параметра в enum до выполнения метода Controller.
-
-Корректный пример:
-
-```text
-status=INTERVIEW
-→ ApplicationStatus.INTERVIEW
-```
-
-Некорректный пример:
-
-```text
-status=UNKNOWN
-→ MethodArgumentTypeMismatchException
-```
-
-Клиент получает единый `400 Bad Request`, внутренний текст Spring не возвращается.
-
-### Фильтрация по vacancyId
-
-Controller принимает:
+`JpaSpecificationExecutor<Application>` добавляет методы выполнения Specification, включая:
 
 ```java
-@RequestParam(required = false)
-Long vacancyId
+findAll(specification, pageable)
 ```
 
-`vacancyId` передаётся в Service без выбора Repository-метода в Controller.
-
-Repository обращается к вложенному свойству `Application.vacancy.id` через underscore в имени derived query:
-
-```java
-Page<Application> findAllByVacancy_Id(
-        Long vacancyId,
-        Pageable pageable
-);
-```
-
-Underscore явно разделяет свойства:
+`ApplicationSpecifications.hasStatus(status)` описывает условие:
 
 ```text
-vacancy.id
+Application.status = status
 ```
 
-### Четыре ветки фильтрации
+`ApplicationSpecifications.hasVacancyId(vacancyId)` описывает путь и условие:
+
+```text
+Application.vacancy.id = vacancyId
+```
+
+`ApplicationSpecifications.withFilters(status, vacancyId)`:
 
 ```text
 status == null, vacancyId == null
-→ findAll(pageable)
+→ Specification.unrestricted()
 
 status != null, vacancyId == null
-→ findAllByStatus(status, pageable)
+→ hasStatus(status)
 
 status == null, vacancyId != null
-→ findAllByVacancy_Id(vacancyId, pageable)
+→ hasVacancyId(vacancyId)
 
 status != null, vacancyId != null
-→ findAllByStatusAndVacancy_Id(status, vacancyId, pageable)
+→ hasStatus(status).and(hasVacancyId(vacancyId))
 ```
 
-Repository-методы:
+`Specification.unrestricted()` — существующая Specification без ограничивающего `Predicate`. Она используется как безопасная начальная точка, а не как проверка существования.
 
-```java
-Page<Application> findAllByStatus(
-        ApplicationStatus status,
-        Pageable pageable
-);
+`hasStatus(...)` и `hasVacancyId(...)` возвращают описание условий. Запрос к базе выполняется позже при вызове Repository.
 
-Page<Application> findAllByVacancy_Id(
-        Long vacancyId,
-        Pageable pageable
-);
+Параметры lambda Specification:
 
-Page<Application> findAllByStatusAndVacancy_Id(
-        ApplicationStatus status,
-        Long vacancyId,
-        Pageable pageable
-);
+```text
+root            — путь от Entity к её полям и связям
+query           — объект строящегося Criteria-запроса
+criteriaBuilder — создаёт Predicate, например equal или and
 ```
 
 ### Перегрузки Service
@@ -593,6 +547,7 @@ getAllApplications(page, size)
 → getAllApplications(page, size, sortBy, direction)
 → getAllApplications(page, size, sortBy, direction, status)
 → getAllApplications(page, size, sortBy, direction, status, vacancyId)
+→ Specification
 → Repository
 ```
 
@@ -602,94 +557,33 @@ getAllApplications(page, size)
 
 ### Тестирование
 
-Service-тесты проверяют:
+`ApplicationSpecificationsTest` проверяет содержание условий:
 
-- пагинацию и сортировку без фильтров;
-- фильтр только по `status`;
-- фильтр только по `vacancyId`;
-- комбинацию `status + vacancyId`;
-- вызов правильного Repository-метода;
-- отсутствие вызовов неправильных Repository-методов;
+- путь `Application.status`;
+- путь `Application.vacancy.id`;
+- вызов `criteriaBuilder.equal(...)`;
+- объединение двух `Predicate` через `criteriaBuilder.and(...)`;
+- `Specification.unrestricted()` при отсутствии фильтров;
+- каждый фильтр отдельно;
+- оба фильтра одновременно.
+
+`ApplicationServiceTest` проверяет обязанности Service:
+
+- создание правильного `Pageable`;
+- пагинацию и сортировку;
+- вызов `findAll(Specification, Pageable)`;
 - преобразование Entity в `ApplicationResponse`;
 - содержимое и метаданные `PagedResponse`;
 - отсутствие Repository и Mapper при ошибочной сортировке.
 
-Controller-тесты проверяют:
+`ApplicationControllerTest` проверяет HTTP-контракт:
 
-- передачу `page`, `size`, `sortBy`, `direction` в Service;
-- значения по умолчанию;
-- передачу отсутствующих фильтров как `null`;
-- преобразование `status=INTERVIEW` в enum;
-- передачу `vacancyId=20` как `Long`;
-- одновременную передачу `status` и `vacancyId`;
-- JSON содержимого страницы;
-- `400 Bad Request` для неправильной пагинации, сортировки и enum;
-- отсутствие вызовов Service и Mapper при ошибке преобразования типа.
-
----
-
-## Текущий контракт Application API
-
-### POST /api/applications
-
-- принимает `ApplicationRequest`;
-- возвращает `ApplicationResponse`;
-- успешный статус: `201 Created`;
-- при отсутствии Vacancy возвращается `404 Not Found`;
-- проверяет даты и соответствие `status`/`appliedAt`.
-
-### GET /api/applications
-
-- принимает `page`, `size`, `sortBy`, `direction`, необязательные `status` и `vacancyId`;
-- возвращает `PagedResponse<ApplicationResponse>`;
-- успешный статус: `200 OK`;
-- значения по умолчанию: `page=0`, `size=10`, `sortBy=createdAt`, `direction=DESC`;
-- `page >= 0`;
-- `1 <= size <= 100`;
-- разрешённые поля: `createdAt`, `appliedAt`, `nextContactAt`, `status`;
-- направления: `ASC`, `DESC`;
-- пустая база возвращает пустой `content`;
-- страница за пределами данных возвращает пустой `content`;
-- неправильное поле возвращает `400 Bad Request`;
-- неправильное направление возвращает `400 Bad Request`;
-- без фильтров возвращаются все Application;
-- с `status` возвращаются Application с указанным статусом;
-- с `vacancyId` возвращаются Application указанной Vacancy;
-- `status` и `vacancyId` можно использовать одновременно;
-- неизвестное значение `status` возвращает `400 Bad Request`;
-- фильтры по Company и датам пока не добавлены.
-
-### GET /api/applications/{id}
-
-- возвращает `ApplicationResponse`;
-- успешный статус: `200 OK`;
-- отсутствующий Application возвращает `404 Not Found`.
-
-### PUT /api/applications/{id}
-
-- принимает `ApplicationUpdateRequest`;
-- обновляет Vacancy, даты и заметки;
-- не изменяет `status`;
-- возвращает `ApplicationResponse`;
-- успешный статус: `200 OK`;
-- проверяет бизнес-правила дат;
-- отсутствующий Application или Vacancy возвращает `404 Not Found`.
-
-### PATCH /api/applications/{id}/status
-
-- принимает `ApplicationStatusUpdateRequest`;
-- изменяет только `status`;
-- успешный статус: `200 OK`;
-- повтор текущего статуса идемпотентен;
-- проверяет разрешённые переходы;
-- проверяет наличие `appliedAt`;
-- бизнес-ошибка возвращает `400 Bad Request`.
-
-### DELETE /api/applications/{id}
-
-- удаляет Application;
-- успешный статус: `204 No Content`;
-- отсутствующий Application возвращает `404 Not Found`.
+- query-параметры и значения по умолчанию;
+- преобразование `status` в enum;
+- передачу `vacancyId` как `Long`;
+- JSON paged response;
+- управляемые `400 Bad Request`;
+- отсутствие вызова Service при ошибке HTTP-преобразования или method validation.
 
 ---
 
@@ -705,6 +599,7 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Entity описывает модель хранения.
 - DTO описывает внешний API-контракт.
 - Mapper преобразует Entity и DTO.
+- Specification описывает динамические условия выборки.
 - Controller не обращается к Repository напрямую.
 - Mapper не обращается к Repository.
 - Entity не возвращаются клиенту напрямую.
@@ -714,12 +609,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Маппинг пишется вручную.
 - Правила дат и переходов статусов находятся в Service.
 - Допустимость полей сортировки проверяется в Service.
-- Controller принимает query-параметры, но не выбирает Repository-метод.
-- Repository получает уже подготовленный `Pageable`.
-- Необязательный enum-параметр преобразуется Spring MVC до выполнения Controller.
+- Controller принимает query-параметры, но не строит Specification.
+- Service получает готовую Specification из `ApplicationSpecifications`.
+- Repository выполняет Specification вместе с `Pageable`.
 - Отсутствующие фильтры передаются в Service как `null`.
-- Выбор Repository-метода по комбинации фильтров находится в Service.
-- Derived query используются для двух простых фильтров и их комбинации.
+- Динамическая сборка фильтров находится в `ApplicationSpecifications.withFilters(...)`.
+- Derived query для комбинаций `status` и `vacancyId` удалены.
 - При ошибочных сценариях проверяется отсутствие лишних взаимодействий.
 - Универсальные CRUD-, sorting- и filtering-классы пока не добавляются.
 
@@ -740,7 +635,7 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ### Java, Spring и архитектура
 
-- назначение Controller, Service, Repository, Entity, DTO и Mapper;
+- назначение Controller, Service, Repository, Entity, DTO, Mapper и Specification;
 - constructor injection;
 - Bean Validation;
 - единая обработка `400` и `404`;
@@ -758,13 +653,13 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - зачем нужен allow-list полей сортировки;
 - зачем старые Service-методы делегируют основной реализации;
 - почему перегрузки должны делегировать только в одном направлении;
-- почему внешний API не должен зависеть от внутреннего текста ошибки Spring;
 - зачем параметр `status` имеет тип `ApplicationStatus`;
 - что означают `status = null` и `vacancyId = null`;
 - почему неизвестный enum не доходит до Service;
 - назначение `MethodArgumentTypeMismatchException`;
 - почему Controller не выбирает Repository-метод;
-- почему для одного и двух простых фильтров можно использовать derived query.
+- почему Service больше не содержит ветки для всех комбинаций фильтров;
+- почему новый фильтр можно добавить отдельной Specification.
 
 ### JPA и Spring Data
 
@@ -775,17 +670,16 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - `Optional` и `orElseThrow()`;
 - базовое назначение `Page`;
 - базовое назначение `Pageable`;
-- `PageRequest.of(page, size)`;
 - `PageRequest.of(page, size, sort)`;
-- `getNumber()`, `getSize()`, `getTotalElements()`, `getTotalPages()`;
 - назначение `Sort`;
-- `Sort.Direction.ASC` и `Sort.Direction.DESC`;
 - `Sort.Direction.fromString(...)`;
-- `Sort.by(direction, property)`;
-- derived query `findAllByStatus(status, pageable)`;
-- derived query по вложенному свойству `findAllByVacancy_Id(...)`;
-- комбинированный derived query `findAllByStatusAndVacancy_Id(...)`;
-- передача одного `Pageable` во все фильтрующие repository-методы.
+- `JpaSpecificationExecutor<Application>` добавляет методы работы со Specification;
+- `Specification<Application>` описывает условие, а не загружает данные;
+- `Specification.unrestricted()` означает отсутствие ограничений;
+- `root.get(...)` создаёт путь к полю или связи;
+- `criteriaBuilder.equal(...)` создаёт условие равенства;
+- `and(...)` объединяет условия;
+- Specification выполняется при вызове Repository.
 
 ### Тестирование
 
@@ -796,20 +690,12 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - mapper-тесты;
 - `@WebMvcTest` и `MockMvc`;
 - проверка HTTP status, Content-Type и JSON;
-- единый формат ошибок;
 - тестирование непустой и пустой страницы;
-- параметры по умолчанию;
-- границы `page` и `size`;
-- отсутствие вызова Service при ошибочной HTTP-валидации;
 - проверка `Pageable` с ожидаемым `Sort`;
-- проверка отсутствия Repository/Mapper при неверной сортировке;
-- Controller-тесты для успешной и ошибочной сортировки;
-- Service-тесты всех веток фильтрации;
-- проверка отсутствия неправильных Repository-вызовов;
-- Controller-тест преобразования строки в enum;
-- тест `MethodArgumentTypeMismatchException`;
-- проверка отсутствия Service/Mapper при неизвестном enum;
-- необходимость обновлять `when(...)` и `verify(...)` после изменения сигнатуры вызываемого метода.
+- необходимость обновлять `when(...)` и `verify(...)` после изменения вызываемого Repository-метода;
+- `ApplicationSpecificationsTest` проверяет построение условий;
+- `ApplicationServiceTest` проверяет использование Specification, пагинацию, маппинг и ответ;
+- Controller-тесты проверяют внешний HTTP-контракт.
 
 ---
 
@@ -823,14 +709,10 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - поведение сортировки по nullable-полям;
 - порядок `NULL` при `ASC` и `DESC` в PostgreSQL;
 - стабильность сортировки при одинаковых значениях поля;
-- построение Spring Data запроса по имени derived query;
-- разбор вложенных свойств в имени derived query;
-- рост количества derived query при добавлении независимых фильтров;
-- динамическое комбинирование фильтров;
-- интерфейс `JpaSpecificationExecutor`;
-- интерфейс `Specification<T>`;
-- Criteria API, используемый внутри Specification;
-- выбор между derived query, JPQL и Specification;
+- Criteria API глубже минимально используемых `Path`, `Predicate`, `equal` и `and`;
+- назначение параметра `CriteriaQuery<?> query` в сложных Specification;
+- выбор между derived query, JPQL, Specification и QueryDSL;
+- интеграционное тестирование Specification на реальной базе;
 - Flyway вместо Hibernate DDL;
 - границы между DTO validation, method validation, Service и базой данных.
 
@@ -841,9 +723,9 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - Пагинация, сортировка и фильтрация реализованы только для `Application`.
 - Для `Company` и `Vacancy` пагинация, сортировка и фильтрация пока не добавлены.
 - Для `Application` реализованы только фильтры `status` и `vacancyId`.
-- Фильтры по `companyId` и датам пока не реализованы.
-- При добавлении каждого нового независимого фильтра количество derived query будет быстро расти.
-- Текущий выбор Repository-метода содержит четыре явные ветки и пока остаётся читаемым.
+- Фильтр по `companyId` пока не реализован.
+- Фильтры по датам пока не реализованы.
+- Unit-тесты проверяют структуру Specification через моки Criteria API, но пока нет интеграционного теста реального SQL-фильтра.
 - Пока нет дополнительной сортировки по `id` для полностью стабильного порядка при одинаковых значениях основного поля.
 - `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
 - Method validation возвращает первое найденное сообщение.
@@ -865,96 +747,109 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Следующее задание
 
-Разобрать переход от нескольких derived query к Spring Data JPA `Specification`.
-
-Цель следующего шага — не сразу добавлять новые HTTP-фильтры, а понять, как избежать отдельного Repository-метода для каждой комбинации условий.
-
-Текущая проблема:
+Добавить отдельную Specification для фильтра по компании:
 
 ```text
-2 независимых фильтра
-→ 4 комбинации
-→ 3 фильтрующих derived query + findAll
+Application
+→ vacancy
+→ company
+→ id
 ```
 
-При добавлении `companyId` станет до восьми комбинаций, а при добавлении фильтров по датам количество сочетаний продолжит расти.
+Ожидаемое условие:
 
-Предварительный план:
+```text
+Application.vacancy.company.id = companyId
+```
 
-1. Объяснить, что такое `Specification<Application>`.
-2. Объяснить, зачем нужен `JpaSpecificationExecutor<Application>`.
-3. Разобрать параметры `root`, `query` и `criteriaBuilder` без углубления во всё внутреннее устройство Criteria API.
-4. Написать маленькую Specification только для `status`.
-5. Добавить Specification только для `vacancyId`.
-6. Научиться соединять условия через `and()`.
-7. Сохранить текущий HTTP-контракт без изменений.
-8. Сначала покрыть новую сборку фильтра unit-тестами.
-9. Затем заменить четыре ветки Repository одним вызовом `findAll(specification, pageable)`.
-10. Убедиться, что все 112 существующих тестов продолжают проходить или корректно обновлены под новую архитектуру.
-11. После рефакторинга решить, добавлять ли `companyId` и фильтры по датам.
-12. Зафиксировать архитектурное решение в `DECISIONS.md`.
+### Первый небольшой подшаг
 
-На первом подшаге пока не добавлять:
+Реализовать только:
 
-- `companyId`;
-- фильтры по датам;
-- несколько статусов;
-- пользовательский поиск по тексту;
-- QueryDSL;
-- ручной Criteria API в Service;
-- Swagger;
-- Docker;
-- Spring Security;
-- frontend.
+```java
+Specification<Application> hasCompanyId(Long companyId)
+```
 
-### Критерии готовности следующего шага
+и unit-тест:
 
-Переход к Specification будет завершён, когда:
+```text
+shouldCreateCompanyIdSpecification
+```
 
-- `ApplicationRepository` поддерживает `JpaSpecificationExecutor<Application>`;
-- условия по `status` и `vacancyId` создаются независимо;
-- отсутствующий фильтр не добавляет условие в запрос;
-- два фильтра объединяются через логическое `AND`;
-- пагинация и сортировка продолжают передаваться через `Pageable`;
-- Service больше не выбирает один из четырёх derived query;
-- HTTP-контракт Controller не меняется;
-- успешные и ошибочные Controller-тесты продолжают проходить;
-- новая логика покрыта тестами;
+В методе ожидается цепочка путей:
+
+```text
+root.get("vacancy")
+→ vacancyPath.get("company")
+→ companyPath.get("id")
+→ criteriaBuilder.equal(companyIdPath, companyId)
+```
+
+### Ограничения первого подшага
+
+Пока не нужно:
+
+- добавлять `companyId` в `withFilters(...)`;
+- менять сигнатуры Service;
+- менять Controller;
+- добавлять query-параметр в HTTP API;
+- переписывать существующие тесты Service и Controller;
+- добавлять фильтры по датам;
+- делать интеграционный тест;
+- коммитить незавершённую функциональность.
+
+### Критерии готовности первого подшага
+
+- создан метод `hasCompanyId(Long companyId)`;
+- путь проходит через `vacancy.company.id`;
+- используется `criteriaBuilder.equal(...)`;
+- unit-тест проверяет все три вызова `get(...)`;
+- unit-тест проверяет `equal(...)`;
+- unit-тест проверяет возвращённый `Predicate` через `assertSame`;
 - полный набор тестов проходит;
-- решение объяснимо на собеседовании;
-- изменение закоммичено отдельно;
-- `DECISIONS.md` обновлён отдельным documentation-коммитом при необходимости.
+- ожидаемое количество после одного нового теста: **119 тестов**.
+
+После этого отдельным шагом:
+
+1. добавить `companyId` в `withFilters(...)`;
+2. покрыть новые комбинации unit-тестами;
+3. передать `companyId` через Service;
+4. добавить query-параметр Controller;
+5. обновить Service- и Controller-тесты;
+6. сохранить пагинацию и сортировку;
+7. выполнить ручную проверку API;
+8. сделать отдельный code-коммит.
 
 ---
 
 ## Вопросы для повторения
 
-1. Какие значения получают `status` и `vacancyId`, если query-параметры отсутствуют?
-2. Почему `status` в Controller имеет тип `ApplicationStatus`, а не `String`?
-3. Почему `status=UNKNOWN` не доходит до Service?
-4. Чем преобразование enum отличается от Bean Validation?
-5. Почему `vacancyId` передаётся в Service, а Controller не выбирает Repository-метод?
-6. Что означает underscore в `findAllByVacancy_Id`?
-7. Как имя `findAllByStatusAndVacancy_Id` описывает условие запроса?
-8. Почему все repository-методы принимают `Pageable`?
-9. Что хранится в `Pageable` кроме номера и размера страницы?
-10. Какие четыре комбинации существуют у двух необязательных фильтров?
-11. Почему основная логика находится в шестипараметровом Service-методе?
-12. Почему перегрузки должны делегировать только в одном направлении?
-13. Из-за чего может возникнуть `StackOverflowError` между перегрузками?
-14. Почему в тесте списков использовался `assertEquals`, а не `assertSame`?
-15. Почему после изменения сигнатуры Controller-вызова пришлось обновлять старые `when(...)` и `verify(...)`?
-16. Как тест доказывает, что Service выбрал правильную ветку Repository?
-17. Почему количество derived query растёт при добавлении независимых фильтров?
-18. Как `Specification` может уменьшить количество repository-методов?
-19. Что должно остаться неизменным для клиента после внутреннего рефакторинга на Specification?
-20. Почему сначала полезно рефакторить существующие фильтры, а уже потом добавлять новые?
+1. Что добавляет Repository интерфейс `JpaSpecificationExecutor<Application>`?
+2. Что возвращает `hasStatus(...)`: данные или описание условия?
+3. Когда Specification фактически выполняется?
+4. Чем `Specification.unrestricted()` отличается от `null`?
+5. Что представляет `root` внутри Specification?
+6. Что возвращает `root.get("status")`?
+7. Что создаёт `criteriaBuilder.equal(...)`?
+8. Как два условия объединяются через `and(...)`?
+9. Что делает `withFilters(...)`, если оба параметра равны `null`?
+10. Что делает `withFilters(...)`, если передан только `vacancyId`?
+11. Почему Service теперь вызывает один Repository-метод для всех комбинаций?
+12. Почему старые derived query можно было удалить?
+13. Что проверяет `ApplicationSpecificationsTest`?
+14. Что проверяет `ApplicationServiceTest` для `getAllApplications(...)`?
+15. Почему Service-тесту допустимо использовать `any()` для Specification?
+16. Какой путь нужен для фильтра по `companyId`?
+17. Почему новый фильтр сначала полезно реализовать отдельно от Controller и Service?
+18. Сколько комбинаций было бы у трёх необязательных фильтров при ручном выборе Repository-метода?
+19. Почему Specification предотвращает рост количества derived query?
+20. Что должно остаться неизменным для клиента при внутреннем рефакторинге фильтрации?
 
 ---
 
 ## Рекомендуемый documentation-коммит
 
-После замены файла проверь, что изменён только:
+После замены файла проверить, что изменён только:
 
 ```text
 PROJECT_STATUS.md
@@ -968,7 +863,7 @@ git --no-pager diff -- PROJECT_STATUS.md
 git add PROJECT_STATUS.md
 git --no-pager diff --cached
 git status
-git commit -m "Update project status after Application vacancy filtering"
+git commit -m "Update project status after specification refactor"
 git push
 git status
 ```
@@ -976,5 +871,5 @@ git status
 Рекомендуемое сообщение коммита:
 
 ```text
-Update project status after Application vacancy filtering
+Update project status after specification refactor
 ```
