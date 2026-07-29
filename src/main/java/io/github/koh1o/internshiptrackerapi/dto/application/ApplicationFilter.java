@@ -11,6 +11,28 @@ public record ApplicationFilter(
         Long companyId,
         LocalDateTime appliedAtFrom,
         LocalDateTime appliedAtTo,
-        WorkFormat workFormat
+        WorkFormat workFormat,
+        LocalDateTime nextContactAtFrom,
+        LocalDateTime nextContactAtTo
 ) {
+
+    public ApplicationFilter(
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId,
+            LocalDateTime appliedAtFrom,
+            LocalDateTime appliedAtTo,
+            WorkFormat workFormat
+    ) {
+        this(
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo,
+                workFormat,
+                null,
+                null
+        );
+    }
 }

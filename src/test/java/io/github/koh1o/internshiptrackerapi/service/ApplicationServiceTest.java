@@ -1634,4 +1634,47 @@ class ApplicationServiceTest {
         );
         verify(applicationMapper).toResponse(application);
     }
+
+    @Test
+    void shouldRejectInvalidNextContactAtRange() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 8, 5, 18, 0);
+
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 7, 30, 10, 0);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        nextContactAtFrom,
+                        nextContactAtTo
+                );
+
+        InvalidApplicationDataException exception = assertThrows(
+                InvalidApplicationDataException.class,
+                () -> applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        filter
+                )
+        );
+
+        assertEquals(
+                "Next contact at from must not be after next contact at to",
+                exception.getMessage()
+        );
+        verifyNoInteractions(applicationMapper, applicationRepository);
+    }
 }

@@ -85,7 +85,15 @@ public class ApplicationController {
             LocalDateTime appliedAtTo,
 
             @RequestParam(required = false)
-            WorkFormat workFormat
+            WorkFormat workFormat,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime nextContactAtFrom,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime nextContactAtTo
     ) {
         ApplicationFilter filter =
                 new ApplicationFilter(
@@ -94,7 +102,9 @@ public class ApplicationController {
                         companyId,
                         appliedAtFrom,
                         appliedAtTo,
-                        workFormat
+                        workFormat,
+                        nextContactAtFrom,
+                        nextContactAtTo
                 );
         return applicationService.getAllApplications(
                 page,

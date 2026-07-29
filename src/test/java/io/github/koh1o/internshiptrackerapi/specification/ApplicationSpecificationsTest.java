@@ -815,4 +815,96 @@ class ApplicationSpecificationsTest {
                 filter.workFormat()
         );
     }
+
+    @Test
+    void shouldCreateNextContactAtFromSpecification() {
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 7, 30, 10, 0);
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<LocalDateTime> nextContactAtPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<LocalDateTime>get("nextContactAt"))
+                .thenReturn(nextContactAtPath);
+        when(criteriaBuilder.greaterThanOrEqualTo(
+                nextContactAtPath,
+                nextContactAtFrom
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasNextContactAtFrom(
+                        nextContactAtFrom
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+        verify(root).get("nextContactAt");
+        verify(criteriaBuilder).greaterThanOrEqualTo(
+                nextContactAtPath,
+                nextContactAtFrom
+        );
+    }
+
+    @Test
+    void shouldCreateNextContactAtToSpecification() {
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 8, 5, 18, 0);
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<LocalDateTime> nextContactAtPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<LocalDateTime>get("nextContactAt"))
+                .thenReturn(nextContactAtPath);
+        when(criteriaBuilder.lessThanOrEqualTo(
+                nextContactAtPath,
+                nextContactAtTo
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasNextContactAtTo(
+                        nextContactAtTo
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+        verify(root).get("nextContactAt");
+        verify(criteriaBuilder).lessThanOrEqualTo(
+                nextContactAtPath,
+                nextContactAtTo
+        );
+    }
 }

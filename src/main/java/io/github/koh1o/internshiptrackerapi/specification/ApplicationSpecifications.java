@@ -152,6 +152,18 @@ public final class ApplicationSpecifications {
             );
         }
 
+        if (filter.nextContactAtFrom() != null) {
+            specification = specification.and(
+                    hasNextContactAtFrom(filter.nextContactAtFrom())
+            );
+        }
+
+        if (filter.nextContactAtTo() != null) {
+            specification = specification.and(
+                    hasNextContactAtTo(filter.nextContactAtTo())
+            );
+        }
+
         return specification;
     }
 
@@ -215,6 +227,34 @@ public final class ApplicationSpecifications {
             return criteriaBuilder.equal(
                     workFormatPath,
                     workFormat
+            );
+        };
+    }
+
+    public static Specification<Application> hasNextContactAtFrom(
+            LocalDateTime nextContactAtFrom
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<LocalDateTime> nextContactAtPath =
+                    root.get("nextContactAt");
+
+            return criteriaBuilder.greaterThanOrEqualTo(
+                    nextContactAtPath,
+                    nextContactAtFrom
+            );
+        };
+    }
+
+    public static Specification<Application> hasNextContactAtTo(
+            LocalDateTime nextContactAtTo
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<LocalDateTime> nextContactAtPath =
+                    root.get("nextContactAt");
+
+            return criteriaBuilder.lessThanOrEqualTo(
+                    nextContactAtPath,
+                    nextContactAtTo
             );
         };
     }

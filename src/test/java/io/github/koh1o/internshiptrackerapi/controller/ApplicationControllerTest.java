@@ -1767,4 +1767,220 @@ class ApplicationControllerTest {
 
         verifyNoInteractions(applicationService, applicationMapper);
     }
+
+    @Test
+    void shouldReturnApplicationsFilteredByNextContactAtRange()
+            throws Exception {
+
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 7, 30, 10, 0);
+
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 8, 5, 18, 0);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        nextContactAtFrom,
+                        nextContactAtTo
+                );
+
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse applicationResponse =
+                new ApplicationResponse(
+                        30L,
+                        20L,
+                        "Java Backend Intern",
+                        5L,
+                        "Example Company",
+                        ApplicationStatus.APPLIED,
+                        LocalDateTime.of(2026, 7, 15, 10, 0),
+                        LocalDateTime.of(2026, 8, 1, 12, 0),
+                        "Contact recruiter",
+                        LocalDateTime.of(2026, 7, 15, 10, 5),
+                        LocalDateTime.of(2026, 7, 15, 10, 5)
+                );
+
+        List<ApplicationResponse> responseContent =
+                List.of(applicationResponse);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        responseContent,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                filter
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param(
+                                        "page",
+                                        String.valueOf(page)
+                                )
+                                .param(
+                                        "size",
+                                        String.valueOf(size)
+                                )
+                                .param(
+                                        "sortBy",
+                                        sortBy
+                                )
+                                .param(
+                                        "direction",
+                                        direction
+                                )
+                                .param(
+                                        "nextContactAtFrom",
+                                        nextContactAtFrom.toString()
+                                )
+                                .param(
+                                        "nextContactAtTo",
+                                        nextContactAtTo.toString()
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.content.length()")
+                        .value(1))
+                .andExpect(jsonPath("$.content[0].id")
+                        .value(applicationResponse.id()))
+                .andExpect(jsonPath("$.content[0].nextContactAt")
+                        .value("2026-08-01T12:00:00"))
+                .andExpect(jsonPath("$.page")
+                        .value(page))
+                .andExpect(jsonPath("$.size")
+                        .value(size))
+                .andExpect(jsonPath("$.totalElements")
+                        .value(totalElements))
+                .andExpect(jsonPath("$.totalPages")
+                        .value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                filter
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectInvalidNextContactAtRange()
+            throws Exception {
+
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 8, 5, 18, 0);
+
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 7, 30, 10, 0);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        nextContactAtFrom,
+                        nextContactAtTo
+                );
+
+        InvalidApplicationDataException exception =
+                new InvalidApplicationDataException(
+                        "Next contact at from must not be after "
+                                + "next contact at to"
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                filter
+        )).thenThrow(exception);
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param(
+                                        "page",
+                                        String.valueOf(page)
+                                )
+                                .param(
+                                        "size",
+                                        String.valueOf(size)
+                                )
+                                .param(
+                                        "sortBy",
+                                        sortBy
+                                )
+                                .param(
+                                        "direction",
+                                        direction
+                                )
+                                .param(
+                                        "nextContactAtFrom",
+                                        nextContactAtFrom.toString()
+                                )
+                                .param(
+                                        "nextContactAtTo",
+                                        nextContactAtTo.toString()
+                                )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.status")
+                        .value(400))
+                .andExpect(jsonPath("$.error")
+                        .value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value(exception.getMessage()))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors")
+                        .isEmpty());
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                filter
+        );
+        verifyNoInteractions(applicationMapper);
+    }
 }

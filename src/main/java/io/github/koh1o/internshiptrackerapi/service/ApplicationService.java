@@ -396,6 +396,17 @@ public class ApplicationService {
             );
         }
 
+        if (
+                filter.nextContactAtFrom() != null
+                        && filter.nextContactAtTo() != null
+                        && filter.nextContactAtFrom()
+                            .isAfter(filter.nextContactAtTo())
+        ) {
+            throw new InvalidApplicationDataException(
+                    "Next contact at from must not be after next contact at to"
+            );
+        }
+
         specification = ApplicationSpecifications.withFilters(filter);
 
         applicationPage = applicationRepository.findAll(
