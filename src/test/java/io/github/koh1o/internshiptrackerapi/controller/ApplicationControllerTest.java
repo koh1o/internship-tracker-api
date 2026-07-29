@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatisticsResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -22,7 +23,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -1981,6 +1984,59 @@ class ApplicationControllerTest {
                 direction,
                 filter
         );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationStatistics() throws Exception {
+        long total = 10;
+
+        Map<ApplicationStatus, Long> byStatus =
+                new EnumMap<>(ApplicationStatus.class);
+
+        byStatus.put(ApplicationStatus.PLANNED, 1L);
+        byStatus.put(ApplicationStatus.APPLIED, 3L);
+        byStatus.put(ApplicationStatus.TEST_TASK, 1L);
+        byStatus.put(ApplicationStatus.INTERVIEW, 2L);
+        byStatus.put(ApplicationStatus.OFFER, 1L);
+        byStatus.put(ApplicationStatus.REJECTED, 2L);
+        byStatus.put(ApplicationStatus.WITHDRAWN, 0L);
+
+        ApplicationStatisticsResponse response =
+                new ApplicationStatisticsResponse(
+                        total,
+                        byStatus
+                );
+
+        when(applicationService.getStatistics())
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        get("/api/applications/statistics")
+                )
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.total")
+                        .value(total))
+                .andExpect(jsonPath("$.byStatus.PLANNED")
+                        .value(1))
+                .andExpect(jsonPath("$.byStatus.APPLIED")
+                        .value(3))
+                .andExpect(jsonPath("$.byStatus.TEST_TASK")
+                        .value(1))
+                .andExpect(jsonPath("$.byStatus.INTERVIEW")
+                        .value(2))
+                .andExpect(jsonPath("$.byStatus.OFFER")
+                        .value(1))
+                .andExpect(jsonPath("$.byStatus.REJECTED")
+                        .value(2))
+                .andExpect(jsonPath("$.byStatus.WITHDRAWN")
+                        .value(0));
+
+        verify(applicationService).getStatistics();
         verifyNoInteractions(applicationMapper);
     }
 }

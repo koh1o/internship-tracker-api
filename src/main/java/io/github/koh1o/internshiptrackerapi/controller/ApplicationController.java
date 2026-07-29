@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatisticsResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -154,5 +155,10 @@ public class ApplicationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteApplication(@PathVariable Long id) {
         applicationService.deleteApplication(id);
+    }
+
+    @GetMapping("/statistics")
+    public ApplicationStatisticsResponse getStatistics() {
+        return applicationService.getStatistics();
     }
 }

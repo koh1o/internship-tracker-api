@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatisticsResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -24,7 +25,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -424,6 +427,25 @@ public class ApplicationService {
                 applicationPage.getSize(),
                 applicationPage.getTotalElements(),
                 applicationPage.getTotalPages()
+        );
+    }
+
+    public ApplicationStatisticsResponse getStatistics() {
+        long total = applicationRepository.count();
+
+        Map<ApplicationStatus, Long> byStatus =
+                new EnumMap<>(ApplicationStatus.class);
+
+        for (ApplicationStatus status : ApplicationStatus.values()) {
+            long count =
+                    applicationRepository.countByStatus(status);
+
+            byStatus.put(status, count);
+        }
+
+        return new ApplicationStatisticsResponse(
+                total,
+                byStatus
         );
     }
 }

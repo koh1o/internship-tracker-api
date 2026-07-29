@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatisticsResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
@@ -1676,5 +1677,43 @@ class ApplicationServiceTest {
                 exception.getMessage()
         );
         verifyNoInteractions(applicationMapper, applicationRepository);
+    }
+
+    @Test
+    void shouldReturnApplicationStatistics() {
+        long total = 21;
+
+        when(applicationRepository.count())
+                .thenReturn(total);
+
+        for (ApplicationStatus status : ApplicationStatus.values()) {
+            long expectedCount = status.ordinal();
+
+            when(applicationRepository.countByStatus(status))
+                    .thenReturn(expectedCount);
+        }
+
+        ApplicationStatisticsResponse result =
+                applicationService.getStatistics();
+
+        assertEquals(total, result.total());
+        assertEquals(
+                ApplicationStatus.values().length,
+                result.byStatus().size()
+        );
+
+        for (ApplicationStatus status : ApplicationStatus.values()) {
+            long expectedCount = status.ordinal();
+
+            assertEquals(
+                    expectedCount,
+                    result.byStatus().get(status)
+            );
+
+            verify(applicationRepository).countByStatus(status);
+        }
+
+        verify(applicationRepository).count();
+        verifyNoInteractions(applicationMapper);
     }
 }
