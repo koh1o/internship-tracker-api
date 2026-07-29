@@ -8,6 +8,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateReq
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
@@ -295,6 +296,32 @@ public class ApplicationService {
             LocalDateTime appliedAtFrom,
             LocalDateTime appliedAtTo
     ) {
+        return getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo,
+                null
+        );
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId,
+            LocalDateTime appliedAtFrom,
+            LocalDateTime appliedAtTo,
+            WorkFormat workFormat
+    ) {
         Sort.Direction sortDirection;
 
         Sort sort;
@@ -347,7 +374,8 @@ public class ApplicationService {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                workFormat
         );
 
         applicationPage = applicationRepository.findAll(

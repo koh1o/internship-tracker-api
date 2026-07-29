@@ -7,6 +7,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpd
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
 import jakarta.validation.Valid;
@@ -80,7 +81,10 @@ public class ApplicationController {
 
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime appliedAtTo
+            LocalDateTime appliedAtTo,
+
+            @RequestParam(required = false)
+            WorkFormat workFormat
     ) {
         return applicationService.getAllApplications(
                 page,
@@ -91,7 +95,8 @@ public class ApplicationController {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                workFormat
         );
     }
 

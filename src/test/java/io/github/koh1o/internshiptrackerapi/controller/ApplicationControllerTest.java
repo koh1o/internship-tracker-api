@@ -7,6 +7,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpd
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
@@ -238,6 +239,7 @@ class ApplicationControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -265,6 +267,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null,
                 null,
@@ -752,6 +755,7 @@ class ApplicationControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -770,6 +774,7 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
+                null,
                 null,
                 null,
                 null,
@@ -863,6 +868,7 @@ class ApplicationControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -886,6 +892,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null,
                 null,
@@ -916,6 +923,7 @@ class ApplicationControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         )).thenThrow(exception);
 
@@ -939,6 +947,7 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
+                null,
                 null,
                 null,
                 null,
@@ -993,6 +1002,7 @@ class ApplicationControllerTest {
                 null,
                 null,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1018,6 +1028,7 @@ class ApplicationControllerTest {
                 sortBy,
                 direction,
                 status,
+                null,
                 null,
                 null,
                 null,
@@ -1090,6 +1101,7 @@ class ApplicationControllerTest {
                 vacancyId,
                 null,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1117,6 +1129,7 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
                 null,
                 null,
                 null
@@ -1169,6 +1182,7 @@ class ApplicationControllerTest {
                 vacancyId,
                 null,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1197,6 +1211,7 @@ class ApplicationControllerTest {
                 direction,
                 status,
                 vacancyId,
+                null,
                 null,
                 null,
                 null
@@ -1251,6 +1266,7 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1279,13 +1295,15 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 null,
+                null,
                 null
         );
         verifyNoInteractions(applicationMapper);
     }
 
     @Test
-    void shouldReturnApplicationsFilteredByAllFilters() throws Exception {
+    void shouldReturnApplicationsFilteredByStatusVacancyAndCompany()
+            throws Exception {
         int page = 0;
         int size = 10;
         String sortBy = "createdAt";
@@ -1333,6 +1351,7 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 null,
+                null,
                 null
         )).thenReturn(pagedResponse);
 
@@ -1365,6 +1384,7 @@ class ApplicationControllerTest {
                 status,
                 vacancyId,
                 companyId,
+                null,
                 null,
                 null
         );
@@ -1429,7 +1449,8 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                null
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
@@ -1476,7 +1497,8 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                null
         );
 
         verifyNoInteractions(applicationMapper);
@@ -1516,7 +1538,8 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                null
         )).thenThrow(exception);
 
         mockMvc.perform(
@@ -1555,8 +1578,144 @@ class ApplicationControllerTest {
                 vacancyId,
                 companyId,
                 appliedAtFrom,
-                appliedAtTo
+                appliedAtTo,
+                null
         );
         verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByWorkFormat()
+            throws Exception {
+
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+        LocalDateTime appliedAtFrom = null;
+        LocalDateTime appliedAtTo = null;
+
+        WorkFormat workFormat =
+                WorkFormat.REMOTE;
+
+        long totalElements = 1;
+        int totalPages = 1;
+
+        ApplicationResponse applicationResponse =
+                new ApplicationResponse(
+                        30L,
+                        20L,
+                        "Java Backend Intern",
+                        5L,
+                        "Example Company",
+                        ApplicationStatus.APPLIED,
+                        LocalDateTime.of(2026, 7, 15, 10, 0),
+                        null,
+                        "Waiting for response",
+                        LocalDateTime.of(2026, 7, 15, 10, 5),
+                        LocalDateTime.of(2026, 7, 15, 10, 5)
+                );
+
+        List<ApplicationResponse> responseContent =
+                List.of(applicationResponse);
+
+        PagedResponse<ApplicationResponse> pagedResponse =
+                new PagedResponse<>(
+                        responseContent,
+                        page,
+                        size,
+                        totalElements,
+                        totalPages
+                );
+
+        when(applicationService.getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo,
+                workFormat
+        )).thenReturn(pagedResponse);
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param("page", String.valueOf(page))
+                                .param("size", String.valueOf(size))
+                                .param("sortBy", sortBy)
+                                .param("direction", direction)
+                                .param(
+                                        "workFormat",
+                                        workFormat.name()
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.content.length()")
+                        .value(1))
+                .andExpect(jsonPath("$.content[0].id")
+                        .value(applicationResponse.id()))
+                .andExpect(jsonPath("$.page")
+                        .value(page))
+                .andExpect(jsonPath("$.size")
+                        .value(size))
+                .andExpect(jsonPath("$.totalElements")
+                        .value(totalElements))
+                .andExpect(jsonPath("$.totalPages")
+                        .value(totalPages));
+
+        verify(applicationService).getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo,
+                workFormat
+        );
+        verifyNoInteractions(applicationMapper);
+    }
+
+    @Test
+    void shouldRejectUnsupportedWorkFormat() throws Exception {
+        String workFormat = "UNKNOWN";
+
+        mockMvc.perform(
+                        get("/api/applications")
+                                .param("workFormat", workFormat)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(content()
+                        .contentTypeCompatibleWith(
+                                MediaType.APPLICATION_JSON
+                        ))
+                .andExpect(jsonPath("$.status")
+                        .value(400))
+                .andExpect(jsonPath("$.error")
+                        .value("Bad request"))
+                .andExpect(jsonPath("$.message")
+                        .value(
+                                "Unsupported value for parameter "
+                                        + "workFormat: UNKNOWN"
+                        ))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/applications"))
+                .andExpect(jsonPath("$.fieldErrors")
+                        .isEmpty());
+
+        verifyNoInteractions(applicationService, applicationMapper);
     }
 }

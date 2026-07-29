@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import jakarta.persistence.criteria.Path;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -77,6 +78,24 @@ public final class ApplicationSpecifications {
             LocalDateTime appliedAtFrom,
             LocalDateTime appliedAtTo
     ) {
+        return withFilters(
+                status,
+                vacancyId,
+                companyId,
+                appliedAtFrom,
+                appliedAtTo,
+                null
+        );
+    }
+
+    public static Specification<Application> withFilters(
+            ApplicationStatus status,
+            Long vacancyId,
+            Long companyId,
+            LocalDateTime appliedAtFrom,
+            LocalDateTime appliedAtTo,
+            WorkFormat workFormat
+    ) {
         Specification<Application> specification =
                 Specification.unrestricted();
 
@@ -107,6 +126,12 @@ public final class ApplicationSpecifications {
         if (appliedAtTo != null) {
             specification = specification.and(
                     hasAppliedAtTo(appliedAtTo)
+            );
+        }
+
+        if (workFormat != null) {
+            specification = specification.and(
+                    hasWorkFormat(workFormat)
             );
         }
 
@@ -156,6 +181,23 @@ public final class ApplicationSpecifications {
             return criteriaBuilder.lessThanOrEqualTo(
                     appliedAtPath,
                     appliedAtTo
+            );
+        };
+    }
+
+    public static Specification<Application> hasWorkFormat(
+            WorkFormat workFormat
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            Path<Vacancy> vacancyPath =
+                    root.get("vacancy");
+
+            Path<WorkFormat> workFormatPath =
+                    vacancyPath.get("workFormat");
+
+            return criteriaBuilder.equal(
+                    workFormatPath,
+                    workFormat
             );
         };
     }

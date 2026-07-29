@@ -4,6 +4,7 @@ import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Path;
@@ -637,6 +638,123 @@ class ApplicationSpecificationsTest {
         verify(criteriaBuilder).and(
                 fromPredicate,
                 toPredicate
+        );
+    }
+
+    @Test
+    void shouldCreateWorkFormatSpecification() {
+        WorkFormat workFormat =
+                WorkFormat.REMOTE;
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<Vacancy> vacancyPath =
+                mock(Path.class);
+
+        Path<WorkFormat> workFormatPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<Vacancy>get("vacancy"))
+                .thenReturn(vacancyPath);
+        when(vacancyPath.<WorkFormat>get("workFormat"))
+                .thenReturn(workFormatPath);
+        when(criteriaBuilder.equal(
+                workFormatPath,
+                workFormat
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasWorkFormat(
+                        workFormat
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+
+        verify(root).get("vacancy");
+        verify(vacancyPath).get("workFormat");
+        verify(criteriaBuilder).equal(
+                workFormatPath,
+                workFormat
+        );
+    }
+
+    @Test
+    void shouldCreateSpecificationOnlyForWorkFormat() {
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+        LocalDateTime appliedAtFrom = null;
+        LocalDateTime appliedAtTo = null;
+
+        WorkFormat workFormat =
+                WorkFormat.REMOTE;
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<Vacancy> vacancyPath =
+                mock(Path.class);
+
+        Path<WorkFormat> workFormatPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<Vacancy>get("vacancy"))
+                .thenReturn(vacancyPath);
+        when(vacancyPath.<WorkFormat>get("workFormat"))
+                .thenReturn(workFormatPath);
+        when(criteriaBuilder.equal(
+                workFormatPath,
+                workFormat
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                );
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+
+        verify(root).get("vacancy");
+        verify(vacancyPath).get("workFormat");
+        verify(criteriaBuilder).equal(
+                workFormatPath,
+                workFormat
         );
     }
 }

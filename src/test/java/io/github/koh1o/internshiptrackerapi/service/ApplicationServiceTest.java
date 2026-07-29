@@ -8,6 +8,7 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateReq
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
+import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import io.github.koh1o.internshiptrackerapi.exception.InvalidApplicationDataException;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
@@ -1464,5 +1465,93 @@ class ApplicationServiceTest {
         );
 
         verifyNoInteractions(applicationRepository, applicationMapper);
+    }
+
+    @Test
+    void shouldReturnApplicationsFilteredByWorkFormat() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationStatus status = null;
+        Long vacancyId = null;
+        Long companyId = null;
+        LocalDateTime appliedAtFrom = null;
+        LocalDateTime appliedAtTo = null;
+
+        WorkFormat workFormat =
+                WorkFormat.REMOTE;
+
+        long totalElements = 1;
+
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                sortBy
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Application application =
+                mock(Application.class);
+
+        ApplicationResponse applicationResponse =
+                mock(ApplicationResponse.class);
+
+        List<Application> applications =
+                List.of(application);
+
+        List<ApplicationResponse> expectedContent =
+                List.of(applicationResponse);
+
+        Page<Application> applicationPage =
+                new PageImpl<>(
+                        applications,
+                        pageable,
+                        totalElements
+                );
+
+        when(applicationRepository.findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        )).thenReturn(applicationPage);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(applicationResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(applicationPage.getNumber(), result.page());
+        assertEquals(applicationPage.getSize(), result.size());
+        assertEquals(
+                applicationPage.getTotalElements(),
+                result.totalElements()
+        );
+        assertEquals(
+                applicationPage.getTotalPages(),
+                result.totalPages()
+        );
+
+        verify(applicationRepository).findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        );
+        verify(applicationMapper).toResponse(application);
     }
 }
