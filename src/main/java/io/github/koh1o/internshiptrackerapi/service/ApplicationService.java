@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
@@ -61,7 +62,7 @@ public class ApplicationService {
                 size,
                 sortBy,
                 direction,
-                null
+                (ApplicationStatus) null
         );
     }
 
@@ -322,6 +323,32 @@ public class ApplicationService {
             LocalDateTime appliedAtTo,
             WorkFormat workFormat
     ) {
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                );
+
+        return getAllApplications(
+                page,
+                size,
+                sortBy,
+                direction,
+                filter
+        );
+    }
+
+    public PagedResponse<ApplicationResponse> getAllApplications(
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            ApplicationFilter filter
+    ) {
         Sort.Direction sortDirection;
 
         Sort sort;
@@ -360,23 +387,16 @@ public class ApplicationService {
         );
 
         if (
-                appliedAtFrom != null
-                        && appliedAtTo != null
-                        && appliedAtFrom.isAfter(appliedAtTo)
+                filter.appliedAtFrom() != null
+                        && filter.appliedAtTo() != null
+                        && filter.appliedAtFrom().isAfter(filter.appliedAtTo())
         ) {
             throw new InvalidApplicationDataException(
                     "Applied at from must not be after applied at to"
             );
         }
 
-        specification = ApplicationSpecifications.withFilters(
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                workFormat
-        );
+        specification = ApplicationSpecifications.withFilters(filter);
 
         applicationPage = applicationRepository.findAll(
                 specification,

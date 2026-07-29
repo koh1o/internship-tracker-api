@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
 import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
@@ -86,17 +87,21 @@ public class ApplicationController {
             @RequestParam(required = false)
             WorkFormat workFormat
     ) {
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                );
         return applicationService.getAllApplications(
                 page,
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                workFormat
+                filter
         );
     }
 

@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.specification;
 
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
@@ -96,42 +97,58 @@ public final class ApplicationSpecifications {
             LocalDateTime appliedAtTo,
             WorkFormat workFormat
     ) {
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                );
+
+        return withFilters(filter);
+    }
+
+    public static Specification<Application> withFilters(
+            ApplicationFilter filter
+    ) {
         Specification<Application> specification =
                 Specification.unrestricted();
 
-        if (status != null) {
+        if (filter.status() != null) {
             specification = specification.and(
-                    hasStatus(status)
+                    hasStatus(filter.status())
             );
         }
 
-        if (vacancyId != null) {
+        if (filter.vacancyId() != null) {
             specification = specification.and(
-                    hasVacancyId(vacancyId)
+                    hasVacancyId(filter.vacancyId())
             );
         }
 
-        if (companyId != null) {
+        if (filter.companyId() != null) {
             specification = specification.and(
-                    hasCompanyId(companyId)
+                    hasCompanyId(filter.companyId())
             );
         }
 
-        if (appliedAtFrom != null) {
+        if (filter.appliedAtFrom() != null) {
             specification = specification.and(
-                    hasAppliedAtFrom(appliedAtFrom)
+                    hasAppliedAtFrom(filter.appliedAtFrom())
             );
         }
 
-        if (appliedAtTo != null) {
+        if (filter.appliedAtTo() != null) {
             specification = specification.and(
-                    hasAppliedAtTo(appliedAtTo)
+                    hasAppliedAtTo(filter.appliedAtTo())
             );
         }
 
-        if (workFormat != null) {
+        if (filter.workFormat() != null) {
             specification = specification.and(
-                    hasWorkFormat(workFormat)
+                    hasWorkFormat(filter.workFormat())
             );
         }
 

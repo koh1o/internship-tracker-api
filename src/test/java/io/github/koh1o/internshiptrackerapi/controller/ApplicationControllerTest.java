@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
 import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
@@ -235,12 +236,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -267,12 +270,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -751,12 +756,14 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications"))
@@ -774,12 +781,14 @@ class ApplicationControllerTest {
                 defaultSize,
                 defaultSortBy,
                 defaultDirection,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -864,12 +873,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenThrow(exception);
 
         mockMvc.perform(get("/api/applications")
@@ -892,12 +903,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -919,12 +932,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenThrow(exception);
 
         mockMvc.perform(get("/api/applications")
@@ -947,12 +962,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -998,12 +1015,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -1027,12 +1046,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                null,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1097,12 +1118,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -1127,12 +1150,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1178,12 +1203,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(get("/api/applications")
@@ -1209,12 +1236,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                null,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        null,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1262,12 +1291,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
@@ -1291,12 +1322,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1347,12 +1380,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        null,
+                        null,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
@@ -1381,12 +1416,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                null,
-                null,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        null,
+                        null,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1445,12 +1482,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        null
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
@@ -1493,12 +1532,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        null
+                )
         );
 
         verifyNoInteractions(applicationMapper);
@@ -1534,12 +1575,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        null
+                )
         )).thenThrow(exception);
 
         mockMvc.perform(
@@ -1574,12 +1617,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                null
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        null
+                )
         );
         verifyNoInteractions(applicationMapper);
     }
@@ -1637,12 +1682,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                workFormat
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                )
         )).thenReturn(pagedResponse);
 
         mockMvc.perform(
@@ -1679,12 +1726,14 @@ class ApplicationControllerTest {
                 size,
                 sortBy,
                 direction,
-                status,
-                vacancyId,
-                companyId,
-                appliedAtFrom,
-                appliedAtTo,
-                workFormat
+                new ApplicationFilter(
+                        status,
+                        vacancyId,
+                        companyId,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        workFormat
+                )
         );
         verifyNoInteractions(applicationMapper);
     }

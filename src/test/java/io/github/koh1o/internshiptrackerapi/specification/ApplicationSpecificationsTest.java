@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.specification;
 
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
@@ -755,6 +756,63 @@ class ApplicationSpecificationsTest {
         verify(criteriaBuilder).equal(
                 workFormatPath,
                 workFormat
+        );
+    }
+
+    @Test
+    void shouldCreateSpecificationFromApplicationFilter() {
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        WorkFormat.REMOTE
+                );
+
+        Root<Application> root =
+                mock(Root.class);
+
+        CriteriaQuery<?> query =
+                mock(CriteriaQuery.class);
+
+        CriteriaBuilder criteriaBuilder =
+                mock(CriteriaBuilder.class);
+
+        Path<Vacancy> vacancyPath =
+                mock(Path.class);
+
+        Path<WorkFormat> workFormatPath =
+                mock(Path.class);
+
+        Predicate expectedPredicate =
+                mock(Predicate.class);
+
+        when(root.<Vacancy>get("vacancy"))
+                .thenReturn(vacancyPath);
+        when(vacancyPath.<WorkFormat>get("workFormat"))
+                .thenReturn(workFormatPath);
+        when(criteriaBuilder.equal(
+                workFormatPath,
+                filter.workFormat()
+        )).thenReturn(expectedPredicate);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        Predicate result = specification.toPredicate(
+                root,
+                query,
+                criteriaBuilder
+        );
+
+        assertSame(expectedPredicate, result);
+        verify(root).get("vacancy");
+        verify(vacancyPath).get("workFormat");
+        verify(criteriaBuilder).equal(
+                workFormatPath,
+                filter.workFormat()
         );
     }
 }

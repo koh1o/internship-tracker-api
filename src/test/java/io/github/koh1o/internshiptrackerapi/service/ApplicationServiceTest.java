@@ -1,6 +1,7 @@
 package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.dto.PagedResponse;
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
@@ -1534,6 +1535,85 @@ class ApplicationServiceTest {
                         appliedAtFrom,
                         appliedAtTo,
                         workFormat
+                );
+
+        assertEquals(expectedContent, result.content());
+        assertEquals(applicationPage.getNumber(), result.page());
+        assertEquals(applicationPage.getSize(), result.size());
+        assertEquals(
+                applicationPage.getTotalElements(),
+                result.totalElements()
+        );
+        assertEquals(
+                applicationPage.getTotalPages(),
+                result.totalPages()
+        );
+
+        verify(applicationRepository).findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        );
+        verify(applicationMapper).toResponse(application);
+    }
+
+    @Test
+    void shouldReturnApplicationsUsingApplicationFilter() {
+        int page = 0;
+        int size = 10;
+        String sortBy = "createdAt";
+        String direction = "DESC";
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        WorkFormat.REMOTE
+                );
+
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                sortBy
+        );
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                sort
+        );
+
+        Application application =
+                mock(Application.class);
+
+        ApplicationResponse applicationResponse =
+                mock(ApplicationResponse.class);
+
+        List<ApplicationResponse> expectedContent =
+                List.of(applicationResponse);
+
+        Page<Application> applicationPage =
+                new PageImpl<>(
+                        List.of(application),
+                        pageable,
+                        1
+                );
+
+        when(applicationRepository.findAll(
+                ArgumentMatchers.<Specification<Application>>any(),
+                ArgumentMatchers.eq(pageable)
+        )).thenReturn(applicationPage);
+        when(applicationMapper.toResponse(application))
+                .thenReturn(applicationResponse);
+
+        PagedResponse<ApplicationResponse> result =
+                applicationService.getAllApplications(
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        filter
                 );
 
         assertEquals(expectedContent, result.content());
