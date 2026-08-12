@@ -42,31 +42,29 @@ class ApplicationRepositoryTest {
         LocalDateTime nextContactAt =
                 LocalDateTime.of(2026, 7, 28, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Example Company",
                 "https://example.com",
                 "Test company"
         );
-        Vacancy vacancy = new Vacancy(
-                company,
+
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
                 "Java Backend Intern",
                 "https://example.com/vacancy",
                 "Helsinki",
                 WorkFormat.HYBRID,
                 "Internship description"
         );
+
         Application application = new Application(
-                vacancy,
+                savedVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
                 nextContactAt,
                 "Waiting for response"
         );
 
-        Company savedCompany = companyRepository.save(company);
-        vacancy.setCompany(savedCompany);
-        Vacancy savedVacancy = vacancyRepository.save(vacancy);
-        application.setVacancy(savedVacancy);
         Application savedApplication =
                 applicationRepository.saveAndFlush(application);
 
@@ -85,14 +83,14 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 1, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Specification Test Company",
                 "https://specification.example.com",
                 "Company for specification integration test"
         );
 
-        Vacancy vacancy = new Vacancy(
-                company,
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
                 "Java Backend Intern",
                 "https://specification.example.com/vacancy",
                 "Oslo",
@@ -100,44 +98,39 @@ class ApplicationRepositoryTest {
                 "Vacancy for specification integration test"
         );
 
-        Application interviewApplication = new Application(
-                vacancy,
+        Application interviewApplication = saveApplication(
+                savedVacancy,
                 ApplicationStatus.INTERVIEW,
                 appliedAt,
                 null,
                 "Interview application"
         );
 
-        Application rejectedApplication = new Application(
-                vacancy,
+        saveApplication(
+                savedVacancy,
                 ApplicationStatus.REJECTED,
                 appliedAt,
                 null,
                 "Rejected application"
         );
 
-        Company savedCompany = companyRepository.save(company);
-
-        vacancy.setCompany(savedCompany);
-
-        Vacancy savedVacancy = vacancyRepository.save(vacancy);
-
-        interviewApplication.setVacancy(savedVacancy);
-        rejectedApplication.setVacancy(savedVacancy);
-
-        applicationRepository.save(interviewApplication);
-        applicationRepository.save(rejectedApplication);
-
         Specification<Application> specification =
                 ApplicationSpecifications.hasStatus(
                         ApplicationStatus.INTERVIEW
                 );
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(ApplicationStatus.INTERVIEW, applications.getFirst().getStatus());
-        assertEquals(interviewApplication.getId(), applications.getFirst().getId());
+        assertEquals(
+                ApplicationStatus.INTERVIEW,
+                applications.getFirst().getStatus()
+        );
+        assertEquals(
+                interviewApplication.getId(),
+                applications.getFirst().getId()
+        );
     }
 
     @Test
@@ -145,25 +138,19 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 1, 10, 0);
 
-        Company firstCompany = new Company(
+        Company savedFirstCompany = saveCompany(
                 "First Company",
                 "https://first.example.com",
                 "First company"
         );
 
-        Company secondCompany = new Company(
+        Company savedSecondCompany = saveCompany(
                 "Second Company",
                 "https://second.example.com",
                 "Second company"
         );
 
-        Company savedFirstCompany =
-                companyRepository.save(firstCompany);
-
-        Company savedSecondCompany =
-                companyRepository.save(secondCompany);
-
-        Vacancy firstVacancy = new Vacancy(
+        Vacancy savedFirstVacancy = saveVacancy(
                 savedFirstCompany,
                 "First Java Intern",
                 "https://first.example.com/vacancy",
@@ -172,7 +159,7 @@ class ApplicationRepositoryTest {
                 "First vacancy"
         );
 
-        Vacancy secondVacancy = new Vacancy(
+        Vacancy savedSecondVacancy = saveVacancy(
                 savedSecondCompany,
                 "Second Java Intern",
                 "https://second.example.com/vacancy",
@@ -181,13 +168,7 @@ class ApplicationRepositoryTest {
                 "Second vacancy"
         );
 
-        Vacancy savedFirstVacancy =
-                vacancyRepository.save(firstVacancy);
-
-        Vacancy savedSecondVacancy =
-                vacancyRepository.save(secondVacancy);
-
-        Application firstApplication = new Application(
+        Application firstApplication = saveApplication(
                 savedFirstVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -195,7 +176,7 @@ class ApplicationRepositoryTest {
                 "First application"
         );
 
-        Application secondApplication = new Application(
+        saveApplication(
                 savedSecondVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -203,18 +184,19 @@ class ApplicationRepositoryTest {
                 "Second application"
         );
 
-        applicationRepository.save(firstApplication);
-        applicationRepository.save(secondApplication);
-
         Specification<Application> specification =
                 ApplicationSpecifications.hasCompanyId(
                         savedFirstCompany.getId()
                 );
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(firstApplication.getId(), applications.getFirst().getId());
+        assertEquals(
+                firstApplication.getId(),
+                applications.getFirst().getId()
+        );
         assertEquals(
                 savedFirstCompany.getId(),
                 applications.getFirst().getVacancy().getCompany().getId()
@@ -226,16 +208,13 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 2, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Work Format Company",
                 "https://work-format.example.com",
                 "Company for work format filtering"
         );
 
-        Company savedCompany =
-                companyRepository.save(company);
-
-        Vacancy remoteVacancy = new Vacancy(
+        Vacancy savedRemoteVacancy = saveVacancy(
                 savedCompany,
                 "Remote Java Intern",
                 "https://work-format.example.com/remote",
@@ -244,7 +223,7 @@ class ApplicationRepositoryTest {
                 "Remote vacancy"
         );
 
-        Vacancy officeVacancy = new Vacancy(
+        Vacancy savedOfficeVacancy = saveVacancy(
                 savedCompany,
                 "Office Java Intern",
                 "https://work-format.example.com/office",
@@ -253,13 +232,7 @@ class ApplicationRepositoryTest {
                 "Office vacancy"
         );
 
-        Vacancy savedRemoteVacancy =
-                vacancyRepository.save(remoteVacancy);
-
-        Vacancy savedOfficeVacancy =
-                vacancyRepository.save(officeVacancy);
-
-        Application remoteApplication = new Application(
+        Application remoteApplication = saveApplication(
                 savedRemoteVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -267,7 +240,7 @@ class ApplicationRepositoryTest {
                 "Remote application"
         );
 
-        Application officeApplication = new Application(
+        saveApplication(
                 savedOfficeVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -275,19 +248,23 @@ class ApplicationRepositoryTest {
                 "Office application"
         );
 
-        applicationRepository.save(remoteApplication);
-        applicationRepository.save(officeApplication);
-
         Specification<Application> specification =
                 ApplicationSpecifications.hasWorkFormat(
                         WorkFormat.REMOTE
                 );
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(remoteApplication.getId(), applications.getFirst().getId());
-        assertEquals(WorkFormat.REMOTE, applications.getFirst().getVacancy().getWorkFormat());
+        assertEquals(
+                remoteApplication.getId(),
+                applications.getFirst().getId()
+        );
+        assertEquals(
+                WorkFormat.REMOTE,
+                applications.getFirst().getVacancy().getWorkFormat()
+        );
     }
 
     @Test
@@ -307,16 +284,13 @@ class ApplicationRepositoryTest {
         LocalDateTime afterRange =
                 LocalDateTime.of(2026, 8, 25, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Date Filter Company",
                 "https://date-filter.example.com",
                 "Company for date filtering"
         );
 
-        Company savedCompany =
-                companyRepository.save(company);
-
-        Vacancy vacancy = new Vacancy(
+        Vacancy savedVacancy = saveVacancy(
                 savedCompany,
                 "Java Intern",
                 "https://date-filter.example.com/vacancy",
@@ -325,10 +299,7 @@ class ApplicationRepositoryTest {
                 "Vacancy for date filtering"
         );
 
-        Vacancy savedVacancy =
-                vacancyRepository.save(vacancy);
-
-        Application beforeApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 beforeRange,
@@ -336,7 +307,7 @@ class ApplicationRepositoryTest {
                 "Before range"
         );
 
-        Application insideApplication = new Application(
+        Application insideApplication = saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 insideRange,
@@ -344,17 +315,13 @@ class ApplicationRepositoryTest {
                 "Inside range"
         );
 
-        Application afterApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 afterRange,
                 null,
                 "After range"
         );
-
-        applicationRepository.save(beforeApplication);
-        applicationRepository.save(insideApplication);
-        applicationRepository.save(afterApplication);
 
         Specification<Application> specification =
                 ApplicationSpecifications.withFilters(
@@ -365,11 +332,18 @@ class ApplicationRepositoryTest {
                         appliedAtTo
                 );
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(insideApplication.getId(), applications.getFirst().getId());
-        assertEquals(insideRange, applications.getFirst().getAppliedAt());
+        assertEquals(
+                insideApplication.getId(),
+                applications.getFirst().getId()
+        );
+        assertEquals(
+                insideRange,
+                applications.getFirst().getAppliedAt()
+        );
     }
 
     @Test
@@ -377,16 +351,13 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 3, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Vacancy Filter Company",
                 "https://vacancy-filter.example.com",
                 "Company for vacancy filtering"
         );
 
-        Company savedCompany =
-                companyRepository.save(company);
-
-        Vacancy firstVacancy = new Vacancy(
+        Vacancy savedFirstVacancy = saveVacancy(
                 savedCompany,
                 "First Java Intern",
                 "https://vacancy-filter.example.com/first",
@@ -395,7 +366,7 @@ class ApplicationRepositoryTest {
                 "First vacancy"
         );
 
-        Vacancy secondVacancy = new Vacancy(
+        Vacancy savedSecondVacancy = saveVacancy(
                 savedCompany,
                 "Second Java Intern",
                 "https://vacancy-filter.example.com/second",
@@ -404,13 +375,7 @@ class ApplicationRepositoryTest {
                 "Second vacancy"
         );
 
-        Vacancy savedFirstVacancy =
-                vacancyRepository.save(firstVacancy);
-
-        Vacancy savedSecondVacancy =
-                vacancyRepository.save(secondVacancy);
-
-        Application firstApplication = new Application(
+        Application firstApplication = saveApplication(
                 savedFirstVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -418,7 +383,7 @@ class ApplicationRepositoryTest {
                 "First application"
         );
 
-        Application secondApplication = new Application(
+        saveApplication(
                 savedSecondVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -426,18 +391,19 @@ class ApplicationRepositoryTest {
                 "Second application"
         );
 
-        applicationRepository.save(firstApplication);
-        applicationRepository.save(secondApplication);
-
         Specification<Application> specification =
                 ApplicationSpecifications.hasVacancyId(
                         savedFirstVacancy.getId()
                 );
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(firstApplication.getId(), applications.getFirst().getId());
+        assertEquals(
+                firstApplication.getId(),
+                applications.getFirst().getId()
+        );
         assertEquals(
                 savedFirstVacancy.getId(),
                 applications.getFirst().getVacancy().getId()
@@ -464,16 +430,13 @@ class ApplicationRepositoryTest {
         LocalDateTime afterRange =
                 LocalDateTime.of(2026, 8, 25, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "Next Contact Company",
                 "https://next-contact.example.com",
                 "Company for next contact filtering"
         );
 
-        Company savedCompany =
-                companyRepository.save(company);
-
-        Vacancy vacancy = new Vacancy(
+        Vacancy savedVacancy = saveVacancy(
                 savedCompany,
                 "Java Backend Intern",
                 "https://next-contact.example.com/vacancy",
@@ -482,10 +445,7 @@ class ApplicationRepositoryTest {
                 "Vacancy for next contact filtering"
         );
 
-        Vacancy savedVacancy =
-                vacancyRepository.save(vacancy);
-
-        Application beforeApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -493,7 +453,7 @@ class ApplicationRepositoryTest {
                 "Before next contact range"
         );
 
-        Application insideApplication = new Application(
+        Application insideApplication = saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -501,17 +461,13 @@ class ApplicationRepositoryTest {
                 "Inside next contact range"
         );
 
-        Application afterApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
                 afterRange,
                 "After next contact range"
         );
-
-        applicationRepository.save(beforeApplication);
-        applicationRepository.save(insideApplication);
-        applicationRepository.save(afterApplication);
 
         ApplicationFilter filter =
                 new ApplicationFilter(
@@ -528,10 +484,18 @@ class ApplicationRepositoryTest {
         Specification<Application> specification =
                 ApplicationSpecifications.withFilters(filter);
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
+
         assertEquals(1, applications.size());
-        assertEquals(insideApplication.getId(), applications.getFirst().getId());
-        assertEquals(insideRange, applications.getFirst().getNextContactAt());
+        assertEquals(
+                insideApplication.getId(),
+                applications.getFirst().getId()
+        );
+        assertEquals(
+                insideRange,
+                applications.getFirst().getNextContactAt()
+        );
     }
 
     @Test
@@ -539,25 +503,19 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 5, 10, 0);
 
-        Company firstCompany = new Company(
+        Company savedFirstCompany = saveCompany(
                 "Combined Filter Company",
                 "https://combined.example.com",
                 "Matching company"
         );
 
-        Company secondCompany = new Company(
+        Company savedSecondCompany = saveCompany(
                 "Other Company",
                 "https://other.example.com",
                 "Non-matching company"
         );
 
-        Company savedFirstCompany =
-                companyRepository.save(firstCompany);
-
-        Company savedSecondCompany =
-                companyRepository.save(secondCompany);
-
-        Vacancy matchingVacancy = new Vacancy(
+        Vacancy savedMatchingVacancy = saveVacancy(
                 savedFirstCompany,
                 "Remote Java Intern",
                 "https://combined.example.com/vacancy",
@@ -566,7 +524,7 @@ class ApplicationRepositoryTest {
                 "Matching vacancy"
         );
 
-        Vacancy otherCompanyVacancy = new Vacancy(
+        Vacancy savedOtherCompanyVacancy = saveVacancy(
                 savedSecondCompany,
                 "Remote Java Intern",
                 "https://other.example.com/vacancy",
@@ -575,37 +533,7 @@ class ApplicationRepositoryTest {
                 "Other company vacancy"
         );
 
-        Vacancy savedMatchingVacancy =
-                vacancyRepository.save(matchingVacancy);
-
-        Vacancy savedOtherCompanyVacancy =
-                vacancyRepository.save(otherCompanyVacancy);
-
-        Application matchingApplication = new Application(
-                savedMatchingVacancy,
-                ApplicationStatus.INTERVIEW,
-                appliedAt,
-                null,
-                "Matching application"
-        );
-
-        Application wrongStatusApplication = new Application(
-                savedMatchingVacancy,
-                ApplicationStatus.REJECTED,
-                appliedAt,
-                null,
-                "Wrong status"
-        );
-
-        Application wrongCompanyApplication = new Application(
-                savedOtherCompanyVacancy,
-                ApplicationStatus.INTERVIEW,
-                appliedAt,
-                null,
-                "Wrong company"
-        );
-
-        Vacancy officeVacancy = new Vacancy(
+        Vacancy savedOfficeVacancy = saveVacancy(
                 savedFirstCompany,
                 "Office Java Intern",
                 "https://combined.example.com/office",
@@ -614,21 +542,37 @@ class ApplicationRepositoryTest {
                 "Wrong work format vacancy"
         );
 
-        Vacancy savedOfficeVacancy =
-                vacancyRepository.save(officeVacancy);
+        Application matchingApplication = saveApplication(
+                savedMatchingVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Matching application"
+        );
 
-        Application wrongWorkFormatApplication = new Application(
+        saveApplication(
+                savedMatchingVacancy,
+                ApplicationStatus.REJECTED,
+                appliedAt,
+                null,
+                "Wrong status"
+        );
+
+        saveApplication(
+                savedOtherCompanyVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Wrong company"
+        );
+
+        saveApplication(
                 savedOfficeVacancy,
                 ApplicationStatus.INTERVIEW,
                 appliedAt,
                 null,
                 "Wrong work format"
         );
-
-        applicationRepository.save(wrongWorkFormatApplication);
-        applicationRepository.save(matchingApplication);
-        applicationRepository.save(wrongStatusApplication);
-        applicationRepository.save(wrongCompanyApplication);
 
         ApplicationFilter filter =
                 new ApplicationFilter(
@@ -645,13 +589,26 @@ class ApplicationRepositoryTest {
         Specification<Application> specification =
                 ApplicationSpecifications.withFilters(filter);
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(1, applications.size());
-        assertEquals(matchingApplication.getId(), applications.getFirst().getId());
-        assertEquals(matchingApplication.getStatus(), applications.getFirst().getStatus());
-        assertEquals(savedFirstCompany.getId(), applications.getFirst().getVacancy().getCompany().getId());
-        assertEquals(WorkFormat.REMOTE, applications.getFirst().getVacancy().getWorkFormat());
+        assertEquals(
+                matchingApplication.getId(),
+                applications.getFirst().getId()
+        );
+        assertEquals(
+                matchingApplication.getStatus(),
+                applications.getFirst().getStatus()
+        );
+        assertEquals(
+                savedFirstCompany.getId(),
+                applications.getFirst().getVacancy().getCompany().getId()
+        );
+        assertEquals(
+                WorkFormat.REMOTE,
+                applications.getFirst().getVacancy().getWorkFormat()
+        );
     }
 
     @Test
@@ -659,16 +616,13 @@ class ApplicationRepositoryTest {
         LocalDateTime appliedAt =
                 LocalDateTime.of(2026, 8, 6, 10, 0);
 
-        Company company = new Company(
+        Company savedCompany = saveCompany(
                 "No Filter Company",
                 "https://no-filter.example.com",
                 "Company for unrestricted filtering"
         );
 
-        Company savedCompany =
-                companyRepository.save(company);
-
-        Vacancy vacancy = new Vacancy(
+        Vacancy savedVacancy = saveVacancy(
                 savedCompany,
                 "Java Intern",
                 "https://no-filter.example.com/vacancy",
@@ -677,10 +631,7 @@ class ApplicationRepositoryTest {
                 "Vacancy for unrestricted filtering"
         );
 
-        Vacancy savedVacancy =
-                vacancyRepository.save(vacancy);
-
-        Application firstApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.APPLIED,
                 appliedAt,
@@ -688,16 +639,13 @@ class ApplicationRepositoryTest {
                 "First application"
         );
 
-        Application secondApplication = new Application(
+        saveApplication(
                 savedVacancy,
                 ApplicationStatus.INTERVIEW,
                 appliedAt,
                 null,
                 "Second application"
         );
-
-        applicationRepository.save(firstApplication);
-        applicationRepository.save(secondApplication);
 
         ApplicationFilter filter =
                 new ApplicationFilter(
@@ -714,8 +662,61 @@ class ApplicationRepositoryTest {
         Specification<Application> specification =
                 ApplicationSpecifications.withFilters(filter);
 
-        List<Application> applications = applicationRepository.findAll(specification);
+        List<Application> applications =
+                applicationRepository.findAll(specification);
 
         assertEquals(2, applications.size());
+    }
+
+    private Company saveCompany(
+            String name,
+            String website,
+            String description
+    ) {
+        Company company = new Company(
+                name,
+                website,
+                description
+        );
+
+        return companyRepository.save(company);
+    }
+
+    private Vacancy saveVacancy(
+            Company company,
+            String title,
+            String link,
+            String city,
+            WorkFormat workFormat,
+            String description
+    ) {
+        Vacancy vacancy = new Vacancy(
+                company,
+                title,
+                link,
+                city,
+                workFormat,
+                description
+        );
+
+        return vacancyRepository.save(vacancy);
+    }
+
+    private Application saveApplication(
+            Vacancy vacancy,
+            ApplicationStatus status,
+            LocalDateTime appliedAt,
+            LocalDateTime nextContactAt,
+            String notes
+    ) {
+        Application application = new Application(
+                vacancy,
+                status,
+                appliedAt,
+                nextContactAt,
+                notes
+        );
+
+        return applicationRepository.save(application);
     }
 }
