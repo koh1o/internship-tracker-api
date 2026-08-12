@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.repository;
 
+import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.Company;
@@ -369,5 +370,352 @@ class ApplicationRepositoryTest {
         assertEquals(1, applications.size());
         assertEquals(insideApplication.getId(), applications.getFirst().getId());
         assertEquals(insideRange, applications.getFirst().getAppliedAt());
+    }
+
+    @Test
+    void shouldFilterApplicationsByVacancyId() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 8, 3, 10, 0);
+
+        Company company = new Company(
+                "Vacancy Filter Company",
+                "https://vacancy-filter.example.com",
+                "Company for vacancy filtering"
+        );
+
+        Company savedCompany =
+                companyRepository.save(company);
+
+        Vacancy firstVacancy = new Vacancy(
+                savedCompany,
+                "First Java Intern",
+                "https://vacancy-filter.example.com/first",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "First vacancy"
+        );
+
+        Vacancy secondVacancy = new Vacancy(
+                savedCompany,
+                "Second Java Intern",
+                "https://vacancy-filter.example.com/second",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Second vacancy"
+        );
+
+        Vacancy savedFirstVacancy =
+                vacancyRepository.save(firstVacancy);
+
+        Vacancy savedSecondVacancy =
+                vacancyRepository.save(secondVacancy);
+
+        Application firstApplication = new Application(
+                savedFirstVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                null,
+                "First application"
+        );
+
+        Application secondApplication = new Application(
+                savedSecondVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                null,
+                "Second application"
+        );
+
+        applicationRepository.save(firstApplication);
+        applicationRepository.save(secondApplication);
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasVacancyId(
+                        savedFirstVacancy.getId()
+                );
+
+        List<Application> applications = applicationRepository.findAll(specification);
+
+        assertEquals(1, applications.size());
+        assertEquals(firstApplication.getId(), applications.getFirst().getId());
+        assertEquals(
+                savedFirstVacancy.getId(),
+                applications.getFirst().getVacancy().getId()
+        );
+    }
+
+    @Test
+    void shouldFilterApplicationsByNextContactAtRange() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 8, 1, 10, 0);
+
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 8, 10, 0, 0);
+
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 8, 20, 23, 59);
+
+        LocalDateTime beforeRange =
+                LocalDateTime.of(2026, 8, 5, 10, 0);
+
+        LocalDateTime insideRange =
+                LocalDateTime.of(2026, 8, 15, 10, 0);
+
+        LocalDateTime afterRange =
+                LocalDateTime.of(2026, 8, 25, 10, 0);
+
+        Company company = new Company(
+                "Next Contact Company",
+                "https://next-contact.example.com",
+                "Company for next contact filtering"
+        );
+
+        Company savedCompany =
+                companyRepository.save(company);
+
+        Vacancy vacancy = new Vacancy(
+                savedCompany,
+                "Java Backend Intern",
+                "https://next-contact.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for next contact filtering"
+        );
+
+        Vacancy savedVacancy =
+                vacancyRepository.save(vacancy);
+
+        Application beforeApplication = new Application(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                beforeRange,
+                "Before next contact range"
+        );
+
+        Application insideApplication = new Application(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                insideRange,
+                "Inside next contact range"
+        );
+
+        Application afterApplication = new Application(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                afterRange,
+                "After next contact range"
+        );
+
+        applicationRepository.save(beforeApplication);
+        applicationRepository.save(insideApplication);
+        applicationRepository.save(afterApplication);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        nextContactAtFrom,
+                        nextContactAtTo
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        List<Application> applications = applicationRepository.findAll(specification);
+        assertEquals(1, applications.size());
+        assertEquals(insideApplication.getId(), applications.getFirst().getId());
+        assertEquals(insideRange, applications.getFirst().getNextContactAt());
+    }
+
+    @Test
+    void shouldFilterApplicationsByMultipleFilters() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 8, 5, 10, 0);
+
+        Company firstCompany = new Company(
+                "Combined Filter Company",
+                "https://combined.example.com",
+                "Matching company"
+        );
+
+        Company secondCompany = new Company(
+                "Other Company",
+                "https://other.example.com",
+                "Non-matching company"
+        );
+
+        Company savedFirstCompany =
+                companyRepository.save(firstCompany);
+
+        Company savedSecondCompany =
+                companyRepository.save(secondCompany);
+
+        Vacancy matchingVacancy = new Vacancy(
+                savedFirstCompany,
+                "Remote Java Intern",
+                "https://combined.example.com/vacancy",
+                null,
+                WorkFormat.REMOTE,
+                "Matching vacancy"
+        );
+
+        Vacancy otherCompanyVacancy = new Vacancy(
+                savedSecondCompany,
+                "Remote Java Intern",
+                "https://other.example.com/vacancy",
+                null,
+                WorkFormat.REMOTE,
+                "Other company vacancy"
+        );
+
+        Vacancy savedMatchingVacancy =
+                vacancyRepository.save(matchingVacancy);
+
+        Vacancy savedOtherCompanyVacancy =
+                vacancyRepository.save(otherCompanyVacancy);
+
+        Application matchingApplication = new Application(
+                savedMatchingVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Matching application"
+        );
+
+        Application wrongStatusApplication = new Application(
+                savedMatchingVacancy,
+                ApplicationStatus.REJECTED,
+                appliedAt,
+                null,
+                "Wrong status"
+        );
+
+        Application wrongCompanyApplication = new Application(
+                savedOtherCompanyVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Wrong company"
+        );
+
+        Vacancy officeVacancy = new Vacancy(
+                savedFirstCompany,
+                "Office Java Intern",
+                "https://combined.example.com/office",
+                "Oslo",
+                WorkFormat.OFFICE,
+                "Wrong work format vacancy"
+        );
+
+        Vacancy savedOfficeVacancy =
+                vacancyRepository.save(officeVacancy);
+
+        Application wrongWorkFormatApplication = new Application(
+                savedOfficeVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Wrong work format"
+        );
+
+        applicationRepository.save(wrongWorkFormatApplication);
+        applicationRepository.save(matchingApplication);
+        applicationRepository.save(wrongStatusApplication);
+        applicationRepository.save(wrongCompanyApplication);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        ApplicationStatus.INTERVIEW,
+                        null,
+                        savedFirstCompany.getId(),
+                        null,
+                        null,
+                        WorkFormat.REMOTE,
+                        null,
+                        null
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        List<Application> applications = applicationRepository.findAll(specification);
+
+        assertEquals(1, applications.size());
+        assertEquals(matchingApplication.getId(), applications.getFirst().getId());
+        assertEquals(matchingApplication.getStatus(), applications.getFirst().getStatus());
+        assertEquals(savedFirstCompany.getId(), applications.getFirst().getVacancy().getCompany().getId());
+        assertEquals(WorkFormat.REMOTE, applications.getFirst().getVacancy().getWorkFormat());
+    }
+
+    @Test
+    void shouldReturnAllApplicationsWhenFiltersAreMissing() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 8, 6, 10, 0);
+
+        Company company = new Company(
+                "No Filter Company",
+                "https://no-filter.example.com",
+                "Company for unrestricted filtering"
+        );
+
+        Company savedCompany =
+                companyRepository.save(company);
+
+        Vacancy vacancy = new Vacancy(
+                savedCompany,
+                "Java Intern",
+                "https://no-filter.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for unrestricted filtering"
+        );
+
+        Vacancy savedVacancy =
+                vacancyRepository.save(vacancy);
+
+        Application firstApplication = new Application(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                null,
+                "First application"
+        );
+
+        Application secondApplication = new Application(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                appliedAt,
+                null,
+                "Second application"
+        );
+
+        applicationRepository.save(firstApplication);
+        applicationRepository.save(secondApplication);
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        List<Application> applications = applicationRepository.findAll(specification);
+
+        assertEquals(2, applications.size());
     }
 }
