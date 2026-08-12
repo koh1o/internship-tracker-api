@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(
@@ -666,6 +668,263 @@ class ApplicationRepositoryTest {
                 applicationRepository.findAll(specification);
 
         assertEquals(2, applications.size());
+    }
+
+    @Test
+    void shouldIncludeAppliedAtRangeBoundaries() {
+        LocalDateTime appliedAtFrom =
+                LocalDateTime.of(2026, 8, 10, 10, 0);
+
+        LocalDateTime insideRange =
+                LocalDateTime.of(2026, 8, 15, 10, 0);
+
+        LocalDateTime appliedAtTo =
+                LocalDateTime.of(2026, 8, 20, 10, 0);
+
+        LocalDateTime beforeRange =
+                LocalDateTime.of(2026, 8, 10, 9, 59);
+
+        LocalDateTime afterRange =
+                LocalDateTime.of(2026, 8, 20, 10, 1);
+
+        Company savedCompany = saveCompany(
+                "Applied Boundary Company",
+                "https://applied-boundary.example.com",
+                "Company for appliedAt boundary testing"
+        );
+
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
+                "Java Backend Intern",
+                "https://applied-boundary.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for appliedAt boundary testing"
+        );
+
+        Application beforeApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                beforeRange,
+                null,
+                "Before appliedAt range"
+        );
+
+        Application fromApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAtFrom,
+                null,
+                "Exactly at appliedAtFrom"
+        );
+
+        Application insideApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                insideRange,
+                null,
+                "Inside appliedAt range"
+        );
+
+        Application toApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAtTo,
+                null,
+                "Exactly at appliedAtTo"
+        );
+
+        Application afterApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                afterRange,
+                null,
+                "After appliedAt range"
+        );
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        appliedAtFrom,
+                        appliedAtTo,
+                        null,
+                        null,
+                        null
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        List<Application> applications =
+                applicationRepository.findAll(specification);
+
+        assertEquals(3, applications.size());
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(fromApplication.getId())
+                        )
+        );
+
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(insideApplication.getId())
+                        )
+        );
+
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(toApplication.getId())
+                        )
+        );
+
+        assertFalse(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(beforeApplication.getId())
+                        )
+        );
+
+        assertFalse(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(afterApplication.getId())
+                        )
+        );
+    }
+
+    @Test
+    void shouldIncludeNextContactAtRangeBoundaries() {
+        LocalDateTime appliedAt =
+                LocalDateTime.of(2026, 8, 1, 10, 0);
+
+        LocalDateTime nextContactAtFrom =
+                LocalDateTime.of(2026, 8, 10, 10, 0);
+
+        LocalDateTime insideRange =
+                LocalDateTime.of(2026, 8, 15, 10, 0);
+
+        LocalDateTime nextContactAtTo =
+                LocalDateTime.of(2026, 8, 20, 10, 0);
+
+        LocalDateTime beforeRange =
+                LocalDateTime.of(2026, 8, 10, 9, 59);
+
+        LocalDateTime afterRange =
+                LocalDateTime.of(2026, 8, 20, 10, 1);
+
+        Company savedCompany = saveCompany(
+                "Next Contact Boundary Company",
+                "https://next-contact-boundary.example.com",
+                "Company for nextContactAt boundary testing"
+        );
+
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
+                "Java Backend Intern",
+                "https://next-contact-boundary.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for nextContactAt boundary testing"
+        );
+
+        Application beforeApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                beforeRange,
+                "Before nextContactAt range"
+        );
+
+        Application fromApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                nextContactAtFrom,
+                "Exactly at nextContactAtFrom"
+        );
+
+        Application insideApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                insideRange,
+                "Inside nextContactAt range"
+        );
+
+        Application toApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                nextContactAtTo,
+                "Exactly at nextContactAtTo"
+        );
+
+        Application afterApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.APPLIED,
+                appliedAt,
+                afterRange,
+                "After nextContactAt range"
+        );
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        nextContactAtFrom,
+                        nextContactAtTo
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        List<Application> applications =
+                applicationRepository.findAll(specification);
+
+        assertEquals(3, applications.size());
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(fromApplication.getId())
+                        )
+        );
+
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(insideApplication.getId())
+                        )
+        );
+
+        assertTrue(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(toApplication.getId())
+                        )
+        );
+
+        assertFalse(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(beforeApplication.getId())
+                        )
+        );
+
+        assertFalse(
+                applications.stream()
+                        .anyMatch(application ->
+                                application.getId().equals(afterApplication.getId())
+                        )
+        );
     }
 
     private Company saveCompany(
