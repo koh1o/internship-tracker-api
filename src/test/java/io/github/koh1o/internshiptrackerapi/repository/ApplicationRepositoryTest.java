@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -924,6 +928,355 @@ class ApplicationRepositoryTest {
                         .anyMatch(application ->
                                 application.getId().equals(afterApplication.getId())
                         )
+        );
+    }
+    @Test
+    void shouldFilterAndSortApplicationsByAppliedAtDescending() {
+        LocalDateTime firstAppliedAt =
+                LocalDateTime.of(2026, 8, 5, 10, 0);
+
+        LocalDateTime secondAppliedAt =
+                LocalDateTime.of(2026, 8, 10, 10, 0);
+
+        LocalDateTime thirdAppliedAt =
+                LocalDateTime.of(2026, 8, 15, 10, 0);
+
+        LocalDateTime rejectedAppliedAt =
+                LocalDateTime.of(2026, 8, 20, 10, 0);
+
+        Company savedCompany = saveCompany(
+                "Sorting Company",
+                "https://sorting.example.com",
+                "Company for sorting test"
+        );
+
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
+                "Java Backend Intern",
+                "https://sorting.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for sorting test"
+        );
+
+        Application firstApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                firstAppliedAt,
+                null,
+                "First interview"
+        );
+
+        Application secondApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                secondAppliedAt,
+                null,
+                "Second interview"
+        );
+
+        Application thirdApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                thirdAppliedAt,
+                null,
+                "Third interview"
+        );
+
+        saveApplication(
+                savedVacancy,
+                ApplicationStatus.REJECTED,
+                rejectedAppliedAt,
+                null,
+                "Rejected application"
+        );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasStatus(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Sort sort = Sort.by(
+                Sort.Direction.DESC,
+                "appliedAt"
+        );
+
+        List<Application> applications =
+                applicationRepository.findAll(
+                        specification,
+                        sort
+                );
+
+        assertEquals(3, applications.size());
+
+        assertEquals(
+                thirdApplication.getId(),
+                applications.get(0).getId()
+        );
+
+        assertEquals(
+                secondApplication.getId(),
+                applications.get(1).getId()
+        );
+
+        assertEquals(
+                firstApplication.getId(),
+                applications.get(2).getId()
+        );
+    }
+
+    @Test
+    void shouldFilterAndPaginateApplications() {
+        LocalDateTime baseAppliedAt =
+                LocalDateTime.of(2026, 8, 1, 10, 0);
+
+        Company savedCompany = saveCompany(
+                "Pagination Company",
+                "https://pagination.example.com",
+                "Company for pagination test"
+        );
+
+        Vacancy savedVacancy = saveVacancy(
+                savedCompany,
+                "Java Backend Intern",
+                "https://pagination.example.com/vacancy",
+                "Oslo",
+                WorkFormat.HYBRID,
+                "Vacancy for pagination test"
+        );
+
+        saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(1),
+                null,
+                "Interview 1"
+        );
+
+        saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(2),
+                null,
+                "Interview 2"
+        );
+
+        Application thirdApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(3),
+                null,
+                "Interview 3"
+        );
+
+        Application fourthApplication = saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(4),
+                null,
+                "Interview 4"
+        );
+
+        saveApplication(
+                savedVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(5),
+                null,
+                "Interview 5"
+        );
+
+        saveApplication(
+                savedVacancy,
+                ApplicationStatus.REJECTED,
+                baseAppliedAt.plusDays(6),
+                null,
+                "Rejected application"
+        );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.hasStatus(
+                        ApplicationStatus.INTERVIEW
+                );
+
+        Pageable pageable = PageRequest.of(
+                1,
+                2,
+                Sort.by(
+                        Sort.Direction.ASC,
+                        "appliedAt"
+                )
+        );
+
+        Page<Application> page =
+                applicationRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        assertEquals(2, page.getContent().size());
+        assertEquals(1, page.getNumber());
+        assertEquals(2, page.getSize());
+        assertEquals(5, page.getTotalElements());
+        assertEquals(3, page.getTotalPages());
+
+        assertEquals(
+                thirdApplication.getId(),
+                page.getContent().get(0).getId()
+        );
+
+        assertEquals(
+                fourthApplication.getId(),
+                page.getContent().get(1).getId()
+        );
+    }
+
+    @Test
+    void shouldFilterSortAndPaginateApplicationsTogether() {
+        LocalDateTime baseAppliedAt =
+                LocalDateTime.of(2026, 8, 1, 10, 0);
+
+        Company targetCompany = saveCompany(
+                "Target Company",
+                "https://target.example.com",
+                "Target company"
+        );
+
+        Company otherCompany = saveCompany(
+                "Other Company",
+                "https://other-pagination.example.com",
+                "Other company"
+        );
+
+        Vacancy targetVacancy = saveVacancy(
+                targetCompany,
+                "Target Java Intern",
+                "https://target.example.com/vacancy",
+                "Oslo",
+                WorkFormat.REMOTE,
+                "Target vacancy"
+        );
+
+        Vacancy otherVacancy = saveVacancy(
+                otherCompany,
+                "Other Java Intern",
+                "https://other-pagination.example.com/vacancy",
+                "Oslo",
+                WorkFormat.REMOTE,
+                "Other vacancy"
+        );
+
+        saveApplication(
+                targetVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(1),
+                null,
+                "Oldest matching"
+        );
+
+        Application middleMatchingApplication = saveApplication(
+                targetVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(2),
+                null,
+                "Middle matching"
+        );
+
+        Application newestMatchingApplication = saveApplication(
+                targetVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(3),
+                null,
+                "Newest matching"
+        );
+
+        saveApplication(
+                targetVacancy,
+                ApplicationStatus.REJECTED,
+                baseAppliedAt.plusDays(4),
+                null,
+                "Wrong status"
+        );
+
+        saveApplication(
+                otherVacancy,
+                ApplicationStatus.INTERVIEW,
+                baseAppliedAt.plusDays(5),
+                null,
+                "Wrong company"
+        );
+
+        ApplicationFilter filter =
+                new ApplicationFilter(
+                        ApplicationStatus.INTERVIEW,
+                        null,
+                        targetCompany.getId(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+
+        Specification<Application> specification =
+                ApplicationSpecifications.withFilters(filter);
+
+        Pageable pageable = PageRequest.of(
+                0,
+                2,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "appliedAt"
+                )
+        );
+
+        Page<Application> page =
+                applicationRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        assertEquals(2, page.getContent().size());
+        assertEquals(3, page.getTotalElements());
+        assertEquals(2, page.getTotalPages());
+        assertEquals(0, page.getNumber());
+        assertEquals(2, page.getSize());
+
+        assertEquals(
+                newestMatchingApplication.getId(),
+                page.getContent().get(0).getId()
+        );
+
+        assertEquals(
+                middleMatchingApplication.getId(),
+                page.getContent().get(1).getId()
+        );
+
+        assertEquals(
+                ApplicationStatus.INTERVIEW,
+                page.getContent().get(0).getStatus()
+        );
+
+        assertEquals(
+                ApplicationStatus.INTERVIEW,
+                page.getContent().get(1).getStatus()
+        );
+
+        assertEquals(
+                targetCompany.getId(),
+                page.getContent()
+                        .get(0)
+                        .getVacancy()
+                        .getCompany()
+                        .getId()
+        );
+
+        assertEquals(
+                targetCompany.getId(),
+                page.getContent()
+                        .get(1)
+                        .getVacancy()
+                        .getCompany()
+                        .getId()
         );
     }
 
