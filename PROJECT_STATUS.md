@@ -2,11 +2,11 @@
 
 ## Актуальность файла
 
-Последнее обновление: **2026-07-29**.
+Последнее обновление: **2026-08-12**.
 
 Это актуальная стабильная точка проекта после завершения основного CRUD для `Company`, `Vacancy` и `Application`,
 реализации бизнес-правил `Application`, пагинации, сортировки, динамической фильтрации, параметр-объекта
-`ApplicationFilter` и простой статистики откликов по статусам.
+`ApplicationFilter`, простой статистики откликов по статусам и перехода с автоматического Hibernate DDL на Flyway migrations.
 
 В проекте должен находиться только один файл с точным названием:
 
@@ -23,25 +23,26 @@ PROJECT_STATUS.md
 Завершён этап:
 
 ```text
-Фильтрация, сортировка и пагинация Application
+Flyway migrations
 ```
 
-Дополнительно реализован первый endpoint простой статистики.
+Схема PostgreSQL теперь создаётся и изменяется через версионированные Flyway migrations.
+Hibernate больше не обновляет схему автоматически и работает с `spring.jpa.hibernate.ddl-auto=validate`.
 
 Следующий крупный этап:
 
 ```text
-Flyway migrations
+Углублённое тестирование
 ```
 
 Следующий небольшой шаг:
 
 ```text
-Проверить текущую Hibernate DDL-конфигурацию,
-разобрать существующую структуру таблиц и подготовить план первой Flyway migration.
+Провести аудит текущих тестовых слоёв и определить первый интеграционный тест,
+который проверяет реальную совместную работу Spring Data JPA, Specification и PostgreSQL.
 ```
 
-На первом подшаге не менять бизнес-логику, Controller и HTTP-контракт.
+На этом шаге не добавлять Swagger, Docker, Security или новые бизнес-функции.
 
 ---
 
@@ -50,13 +51,13 @@ Flyway migrations
 Последний рабочий code-коммит:
 
 ```text
-a82d9f4 Add application status statistics endpoint
+abc0fe5 Add initial Flyway migration
 ```
 
 Последний documentation-коммит до обновления этого файла:
 
 ```text
-6bed2f5 Update project status after application filtering
+031c7db Document application filtering and statistics progress
 ```
 
 Последние завершённые code-коммиты:
@@ -80,6 +81,7 @@ f802fa6 Replace application derived queries with specifications
 58ba3f4 Introduce Application filter object
 7f902aa Add Application next contact date filtering
 a82d9f4 Add application status statistics endpoint
+abc0fe5 Add initial Flyway migration
 ```
 
 Состояние Git после отправки последнего code-коммита:
@@ -93,7 +95,7 @@ nothing to commit, working tree clean
 
 Всего в проекте **145 тестов**.
 
-Последний полный запуск:
+Последний полный запуск после чистого создания схемы через Flyway:
 
 ```text
 Tests run: 145
@@ -104,8 +106,12 @@ BUILD SUCCESS
 ```
 
 Пароль PostgreSQL передаётся через переменную окружения `DB_PASSWORD`.
-В текущем PowerShell-сеансе переменную не нужно задавать повторно.
-Она понадобится после открытия нового терминала или при ошибке отсутствующей переменной окружения.
+Если открыт новый PowerShell-сеанс, переменную нужно задать заново локально перед запуском приложения или тестов.
+Реальный пароль не хранится в Git и не должен попадать в документацию.
+
+При первом запуске тестов после перехода на Flyway была получена ошибка PostgreSQL `SQL State 28P01`.
+Причиной оказалась отсутствующая `DB_PASSWORD` в текущем PowerShell-сеансе, а не ошибка migration.
+После восстановления переменной все 145 тестов прошли успешно.
 
 Изменения документации должны коммититься отдельно от Java-кода.
 
@@ -142,6 +148,34 @@ BUILD SUCCESS
 - [x] Секреты не хранятся в Git.
 - [x] Пароль базы данных передаётся через переменную окружения.
 - [x] Repository-тесты выполняются на PostgreSQL.
+
+### Flyway и управление схемой
+
+- [x] Подключён `spring-boot-starter-flyway`.
+- [x] Для PostgreSQL подключён `org.flywaydb:flyway-database-postgresql`.
+- [x] Создан каталог `src/main/resources/db/migration`.
+- [x] Создана первая versioned migration `V1__create_initial_schema.sql`.
+- [x] `V1` создаёт таблицы `companies`, `vacancies` и `applications`.
+- [x] Порядок создания учитывает foreign key: `companies → vacancies → applications`.
+- [x] В migration зафиксированы `PRIMARY KEY`, `FOREIGN KEY`, `NOT NULL`, длины `VARCHAR` и timestamp-типы.
+- [x] Для `WorkFormat` и `ApplicationStatus` сохранены database `CHECK` constraints.
+- [x] Hibernate DDL-режим изменён с `update` на `validate`.
+- [x] Hibernate больше не должен автоматически изменять схему.
+- [x] Старая dev-схема была удалена после проверки, что в ней нет важных данных.
+- [x] Пустая PostgreSQL-схема успешно воспроизведена через Flyway.
+- [x] Flyway создал служебную таблицу `flyway_schema_history`.
+- [x] В `flyway_schema_history` зарегистрирована успешная migration версии `1`.
+- [x] После чистого применения `V1` все 145 тестов проходят.
+
+Текущая цепочка управления схемой:
+
+```text
+V1 / будущие V2, V3...
+→ Flyway
+→ PostgreSQL schema
+→ Hibernate validate
+→ Entity
+```
 
 ### Company
 
@@ -641,7 +675,14 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - как Spring Data разбирает имя `countByStatus`;
 - почему для enum-ключей подходит `EnumMap`;
 - почему текущая статистика выполняет восемь запросов;
-- как `GROUP BY status` уменьшит количество запросов.
+- как `GROUP BY status` уменьшит количество запросов;
+- что database migration переводит БД из одного известного состояния в следующее;
+- чем Flyway migration отличается от `spring.jpa.hibernate.ddl-auto=update`;
+- что `ddl-auto=validate` проверяет схему, но не создаёт и не изменяет таблицы;
+- зачем migrations хранятся в Git;
+- зачем Flyway нужна таблица `flyway_schema_history`;
+- почему порядок `companies → vacancies → applications` важен из-за foreign key;
+- почему Flyway и Hibernate `validate` выполняют разные роли.
 
 ### JPA и Spring Data
 
@@ -695,7 +736,8 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - projection для агрегирующих запросов;
 - JPQL-запрос с `GROUP BY`;
 - интеграционное тестирование Specification на изолированной базе;
-- Flyway вместо Hibernate DDL;
+- правила дальнейшего развития Flyway migrations: новые `V2`, `V3` и неизменяемость уже применённых versioned migrations;
+- checksum, `validate`, `repair`, baseline и другие более продвинутые возможности Flyway;
 - границы между DTO validation, method validation, Service и базой данных.
 
 ---
@@ -713,8 +755,7 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 - `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
 - Method validation возвращает первое найденное сообщение.
 - `fieldErrors` для query-параметров пока пустой.
-- Схема не переведена на Flyway.
-- Hibernate пока управляет схемой через текущую DDL-конфигурацию.
+- Начальная схема переведена на Flyway; последующие изменения схемы должны оформляться новыми migrations.
 - `spring.jpa.open-in-view` пока не отключён явно.
 - В тестах есть предупреждение Mockito о динамическом подключении Java agent; сборку это сейчас не ломает.
 - В `Company.java` остался wildcard import `jakarta.persistence.*`; исправить отдельным cleanup-коммитом.
@@ -734,64 +775,60 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Следующее задание
 
-Начать переход от управления схемой через Hibernate к Flyway.
+Начать этап углублённого тестирования.
 
 ### Первый небольшой подшаг
 
-Проверить:
+Провести аудит существующих тестов и выбрать первый интеграционный сценарий, который сейчас не покрыт реальной работой с БД.
 
-- зависимости в `pom.xml`;
-- текущие настройки `spring.jpa.hibernate.ddl-auto`;
-- текущую структуру таблиц `companies`, `vacancies` и `applications`;
-- имена колонок;
-- ограничения `NOT NULL`;
-- длины строковых полей;
-- внешние ключи;
-- значения enum, которые сохраняются как строки;
-- порядок создания таблиц с учётом связей.
+В первую очередь рассмотреть динамическую фильтрацию `Application` через `Specification`, потому что текущий
+`ApplicationSpecificationsTest` проверяет Criteria API через mocks, но не проверяет фактический SQL на PostgreSQL.
 
-Пока не создавать migration без предварительного разбора текущей схемы.
+Перед написанием нового теста нужно определить:
+
+- чем unit-тест Specification отличается от интеграционного теста Repository/Specification;
+- какой Spring test slice или контекст нужен;
+- какие тестовые данные понадобятся для `Company → Vacancy → Application`;
+- какой один фильтр или небольшую комбинацию фильтров проверить первой;
+- как не превратить первый интеграционный тест в большой сценарий на десятки условий.
 
 ### Ограничения
 
 Пока не нужно:
 
-- менять Entity;
-- менять Controller и Service;
-- менять HTTP API;
-- добавлять Docker;
-- добавлять Testcontainers;
-- удалять существующую схему без резервной проверки;
-- коммитить незавершённую migration.
+- добавлять Swagger/OpenAPI;
+- добавлять Docker или Docker Compose;
+- добавлять Spring Security, User или JWT;
+- оптимизировать статистику через `GROUP BY`;
+- исправлять `Company.java` wildcard import внутри тестового feature-коммита;
+- добавлять Testcontainers до отдельного решения о стратегии интеграционных тестов;
+- писать один огромный integration test на весь API.
 
 ### Критерии готовности первого подшага
 
-- понятно, зачем нужен Flyway;
-- найдено текущее значение `ddl-auto`;
-- определено, кто после перехода будет создавать и изменять схему;
-- составлен план первой migration;
-- понятен порядок создания таблиц;
-- Java-код и API не изменены.
+- понятно различие unit-, controller-, repository- и integration tests;
+- выбран один небольшой интеграционный сценарий;
+- тест проверяет реальную работу JPA/Specification с PostgreSQL, а не только mocks;
+- существующие 145 тестов продолжают проходить;
+- новый тест понятен и может быть объяснён своими словами;
+- изменения прошли review и зафиксированы отдельным code-коммитом.
 
 ---
 
 ## Вопросы для повторения
 
-1. Чем `ApplicationFilter` лучше основной сигнатуры с восемью отдельными фильтрами?
-2. Почему старые перегрузки Service пока сохранены?
-3. Как отличить overloading от inheritance и delegation?
-4. Какой путь используется для фильтра `workFormat`?
-5. Что происходит, если одна из границ диапазона равна `null`?
-6. Почему равные границы диапазона разрешены?
-7. Почему неизвестный `ApplicationStatus` не доходит до Service?
-8. Сколько запросов выполняет текущая статистика и почему?
-9. Что вернёт `GROUP BY status`, если в таблице нет откликов со статусом `OFFER`?
-10. Почему Service должен добавить отсутствующий статус в `EnumMap` со значением `0`?
-11. Как Spring Data понимает метод `countByStatus(...)`?
-12. Почему Controller не обращается к Repository напрямую?
-13. Чем Flyway отличается от автоматического Hibernate DDL?
-14. Почему миграции должны храниться в Git?
-15. Почему порядок создания `companies`, `vacancies` и `applications` имеет значение?
+1. Что такое database migration и какую проблему она решает?
+2. Чем Flyway migration отличается от `spring.jpa.hibernate.ddl-auto=update`?
+3. Что делает `spring.jpa.hibernate.ddl-auto=validate` и чего он не делает?
+4. Почему migrations должны храниться в Git?
+5. Для чего Flyway создаёт `flyway_schema_history`?
+6. Почему `companies` создаётся раньше `vacancies`, а `vacancies` раньше `applications`?
+7. Почему `work_format` и `status` хранятся как `VARCHAR`, но дополнительно защищены `CHECK` constraint?
+8. Почему бизнес-правила переходов `ApplicationStatus` не были перенесены в `V1`?
+9. Что нужно будет сделать с БД, если в будущем Entity получит новую сохраняемую колонку?
+10. Почему после появления `V2` нельзя просто бездумно переписывать уже применённую `V1`?
+11. Чем текущий mock-based `ApplicationSpecificationsTest` отличается от интеграционной проверки фильтрации на PostgreSQL?
+12. Почему отсутствие `DB_PASSWORD` привело к падению Flyway до создания `EntityManagerFactory`?
 
 ---
 
@@ -811,7 +848,7 @@ git --no-pager diff -- PROJECT_STATUS.md DECISIONS.md
 git add PROJECT_STATUS.md DECISIONS.md
 git --no-pager diff --cached --check
 git --no-pager diff --cached
-git commit -m "Document application filtering and statistics progress"
+git commit -m "Document Flyway migration setup"
 git push
 git status
 ```
