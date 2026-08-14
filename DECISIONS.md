@@ -323,42 +323,187 @@ HTTP-контракт и тесты статистики.
 - Mapper не участвует в статистике;
 - позднее реализацию следует оптимизировать одним агрегирующим запросом с `GROUP BY status`.
 
+
 ---
 
-## 2026-08-12 — Flyway как источник истины для схемы БД
+## 2026-08-12 — Flyway как источник истины для схемы
 
 ### Решение
 
-Использовать Flyway как основной механизм создания и изменения структуры PostgreSQL.
-Hibernate больше не должен автоматически изменять схему и работает с `spring.jpa.hibernate.ddl-auto=validate`.
-Начальная структура базы зафиксирована в versioned migration `V1__create_initial_schema.sql`.
+Использовать Flyway для создания и изменения схемы PostgreSQL, а Hibernate перевести в режим проверки схемы:
+
+```properties
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Первая versioned migration:
+
+```text
+V1__create_initial_schema.sql
+```
 
 ### Причина
 
-Изменения схемы должны быть явными, версионированными, воспроизводимыми и храниться в Git вместе с кодом.
-`ddl-auto=update` удобен на раннем этапе обучения, но не даёт контролируемой истории изменения схемы и позволяет
-Hibernate автоматически принимать решения об изменении базы.
-
-Flyway позволяет получить предсказуемую последовательность изменений `V1`, `V2`, `V3` и воспроизвести структуру
-проекта на пустой PostgreSQL.
+Автоматическое Hibernate DDL удобно на раннем этапе, но не даёт контролируемой истории изменений схемы. Для портфолийного backend-проекта схема должна воспроизводиться из versioned migrations, которые хранятся в Git.
 
 ### Альтернативы
 
-- продолжить использовать `spring.jpa.hibernate.ddl-auto=update`;
-- оставить существующую Hibernate-схему и выполнить baseline для Flyway;
-- управлять схемой вручную без versioned migrations.
+- продолжить использовать Hibernate `create` / `update`;
+- создавать таблицы вручную через psql;
+- использовать Liquibase.
 
 ### Последствия
 
-- migrations хранятся в `src/main/resources/db/migration`;
-- первая migration называется `V1__create_initial_schema.sql`;
-- `V1` создаёт `companies`, затем `vacancies`, затем `applications` с учётом foreign key;
-- Flyway хранит информацию о применённых migrations в `flyway_schema_history`;
-- Hibernate использует `ddl-auto=validate` и проверяет соответствие схемы Entity, но не изменяет её;
-- новые изменения структуры базы должны оформляться следующими migrations, например `V2`, `V3`;
-- уже применённые versioned migrations нельзя бездумно переписывать после их использования в других окружениях;
-- изменения Entity, влияющие на структуру хранения, должны сопровождаться соответствующей migration;
-- пустая dev-схема была успешно создана из `V1`, после чего все 145 тестов прошли.
+- Flyway создаёт таблицы `companies`, `vacancies`, `applications`;
+- Hibernate только валидирует соответствие Entity схеме;
+- новая база может быть собрана из migrations;
+- будущие изменения схемы оформляются как `V2`, `V3` и далее;
+- versioned migration после применения не должна редактироваться без специальной причины.
+
+---
+
+## 2026-08-12 — Не использовать Flyway repair для учебной checksum-ошибки на пустой development DB
+
+### Решение
+
+При checksum mismatch первой migration на локальной development DB без важных данных не использовать `flyway repair`, а удалить учебную схему и `flyway_schema_history`, затем применить текущую V1 заново.
+
+### Причина
+
+Checksum mismatch возник после форматирования уже применённой V1. База не содержала важных данных, поэтому безопаснее было пересоздать её из текущей versioned migration и сохранить понятную историю, чем обучаться обходу ошибки через `repair` без необходимости.
+
+### Альтернативы
+
+- выполнить `flyway repair`;
+- вернуть файл V1 байт-в-байт к старому состоянию;
+- вручную менять запись checksum в `flyway_schema_history`.
+
+### Последствия
+
+- подтверждено понимание назначения checksum;
+- после стабилизации V1 её больше не редактировать;
+- реальные изменения схемы делать новой migration;
+- `repair` не использовать как обычный способ скрыть несоответствие migration history.
+
+---
+
+## 2026-08-14 — Specification unit tests дополняются реальными PostgreSQL integration tests
+
+### Решение
+
+Сохранить Mockito-тесты `ApplicationSpecificationsTest`, но дополнить их repository integration tests через:
+
+```java
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+```
+
+### Причина
+
+Mocked Criteria API проверяет построение `Predicate`, но не доказывает, что итоговая цепочка Spring Data JPA → Hibernate → SQL → PostgreSQL действительно возвращает правильные записи.
+
+### Альтернативы
+
+- оставить только Mockito unit tests;
+- удалить unit tests и оставить только PostgreSQL tests;
+- проверять фильтры только через Controller tests.
+
+### Последствия
+
+- unit и integration tests выполняют разные задачи и сохраняются вместе;
+- реальные tests проверяют отдельные filters, их комбинации и отсутствие filters;
+- для каждого важного filter scenario используются matching и non-matching rows;
+- Repository tests пока зависят от локального PostgreSQL;
+- вопрос перехода на Testcontainers вынесен в отдельное решение.
+
+---
+
+## 2026-08-14 — Включающие границы date filters проверяются отдельными integration tests
+
+### Решение
+
+Отдельно проверять, что диапазоны `appliedAt` и `nextContactAt` включают значения, равные `from` и `to`.
+
+### Причина
+
+Обычный сценарий `before / inside / after` подтверждает работу диапазона в целом, но не доказывает семантику операторов `>=` и `<=` на самих границах.
+
+### Альтернативы
+
+- считать unit tests Specification достаточными;
+- проверять только одно значение внутри диапазона;
+- проверять boundaries только через Service tests.
+
+### Последствия
+
+Integration data строятся как:
+
+```text
+before → не входит
+from   → входит
+inside → входит
+to     → входит
+after  → не входит
+```
+
+Тесты не зависят от порядка результата, если `Sort` явно не задан.
+
+---
+
+## 2026-08-14 — Проверять Specification, Sort и Pageable совместно
+
+### Решение
+
+Добавить repository integration tests, которые проверяют совместную работу:
+
+```text
+Specification + Sort + Pageable + PostgreSQL
+```
+
+### Причина
+
+Фильтрация, сортировка и pagination используются клиентом одновременно. Раздельные tests каждого механизма не полностью доказывают правильность их комбинации в реальном SQL-запросе.
+
+### Альтернативы
+
+- оставить только отдельные unit/service tests;
+- проверять комбинацию только через MockMvc;
+- сразу перейти к end-to-end tests.
+
+### Последствия
+
+Проверяются:
+
+- filtering + sorting;
+- filtering + pagination;
+- filtering + sorting + pagination;
+- `Page` metadata (`number`, `size`, `totalElements`, `totalPages`);
+- порядок content только при явно заданном `Sort`;
+- JPA Entity в assertions сравниваются по `id`, а не через object identity.
+
+---
+
+## 2026-08-14 — Testcontainers отложен до отдельного выбора стратегии integration testing
+
+### Решение
+
+Пока оставить repository integration tests на локальном PostgreSQL и не подключать Testcontainers автоматически.
+
+### Причина
+
+Сначала нужно было научиться отличать unit test от integration test и проверить сами Specification scenarios на реальной PostgreSQL. Подключение Testcontainers добавляет отдельные понятия: lifecycle контейнера, datasource wiring, startup cost и изоляцию среды.
+
+### Альтернативы
+
+- подключить Testcontainers сразу;
+- продолжить использовать локальный PostgreSQL до конца проекта;
+- использовать embedded database.
+
+### Последствия
+
+- текущие integration tests реальны, но требуют доступного локального PostgreSQL;
+- следующий этап начинается с осознанного выбора: Testcontainers или более высокоуровневые integration scenarios;
+- если будет выбран Testcontainers, Flyway должен применяться и к test container database.
 
 ---
 

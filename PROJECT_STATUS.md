@@ -2,47 +2,54 @@
 
 ## Актуальность файла
 
-Последнее обновление: **2026-08-12**.
+Последнее обновление: **2026-08-14**.
 
-Это актуальная стабильная точка проекта после завершения основного CRUD для `Company`, `Vacancy` и `Application`,
-реализации бизнес-правил `Application`, пагинации, сортировки, динамической фильтрации, параметр-объекта
-`ApplicationFilter`, простой статистики откликов по статусам и перехода с автоматического Hibernate DDL на Flyway migrations.
+Это актуальная стабильная точка проекта после:
 
-В проекте должен находиться только один файл с точным названием:
+- завершения CRUD для `Company`, `Vacancy` и `Application`;
+- реализации бизнес-правил `Application`;
+- реализации пагинации, сортировки, динамической фильтрации и статистики;
+- перевода схемы PostgreSQL на Flyway;
+- добавления реальных integration tests для `ApplicationSpecifications` через Spring Data JPA, Hibernate и PostgreSQL;
+- проверки включающих границ дат;
+- проверки совместной работы фильтрации, сортировки и пагинации на реальной базе.
+
+В проекте должен находиться один файл с точным названием:
 
 ```text
 PROJECT_STATUS.md
 ```
 
-Название файла изменять нельзя.
-
 ---
 
 ## Текущий этап
 
-Завершён этап:
+Завершены этапы:
 
 ```text
-Flyway migrations
+Application CRUD и бизнес-правила
+Application pagination / sorting / filtering
+Application statistics
+Flyway initial migration
+Базовый блок repository integration testing
 ```
 
-Схема PostgreSQL теперь создаётся и изменяется через версионированные Flyway migrations.
-Hibernate больше не обновляет схему автоматически и работает с `spring.jpa.hibernate.ddl-auto=validate`.
-
-Следующий крупный этап:
+Текущий крупный этап:
 
 ```text
 Углублённое тестирование
 ```
 
-Следующий небольшой шаг:
+Следующий небольшой шаг на следующую сессию:
 
 ```text
-Провести аудит текущих тестовых слоёв и определить первый интеграционный тест,
-который проверяет реальную совместную работу Spring Data JPA, Specification и PostgreSQL.
+Определить следующий уровень integration testing:
+1. оценить необходимость Testcontainers сейчас;
+2. решить, изолировать ли PostgreSQL repository tests через Testcontainers;
+3. либо сначала добавить более высокоуровневые integration/controller scenarios.
 ```
 
-На этом шаге не добавлять Swagger, Docker, Security или новые бизнес-функции.
+Не переходить к Swagger, Docker, Security или JWT до завершения текущего блока тестирования.
 
 ---
 
@@ -51,40 +58,28 @@ Hibernate больше не обновляет схему автоматичес
 Последний рабочий code-коммит:
 
 ```text
-abc0fe5 Add initial Flyway migration
+6bec3ee Test application filtering with pagination and sorting
 ```
 
-Последний documentation-коммит до обновления этого файла:
+Предыдущий documentation-коммит перед этим обновлением:
 
 ```text
-031c7db Document application filtering and statistics progress
+ae10ca5 Document Flyway migration setup
 ```
 
-Последние завершённые code-коммиты:
+Последние важные code-коммиты:
 
 ```text
-985bdf3 Add Application status update endpoint
-aa61b8f Add Application delete endpoint
-9edfa59 Add Application date validation
-733e469 Add Application status transition validation
-7c83dfc Handle unchanged Application status
-a76960f Add Application status transition rules
-6a882b5 Validate applied date for Application status
-4bbbd31 Add Application pagination
-9c77228 Add Application sorting
-3c75b4e Add Application status filtering
-2e92a60 Add Application vacancy filtering
-f802fa6 Replace application derived queries with specifications
-13084b5 Add Application company filtering
-41f7c8f Add Application applied date filtering
-933ce1d Add Application work format filtering
-58ba3f4 Introduce Application filter object
-7f902aa Add Application next contact date filtering
-a82d9f4 Add application status statistics endpoint
 abc0fe5 Add initial Flyway migration
+c8e939f Add application specification integration test
+39fdeea Add application filtering integration tests
+f5d8b95 Add comprehensive application filtering integration tests
+ebad428 Refactor application repository test setup
+b7f096a Test application date filter boundaries
+6bec3ee Test application filtering with pagination and sorting
 ```
 
-Состояние Git после отправки последнего code-коммита:
+Состояние Git после последнего push:
 
 ```text
 On branch main
@@ -93,33 +88,23 @@ Your branch is up to date with 'origin/main'.
 nothing to commit, working tree clean
 ```
 
-Всего в проекте **145 тестов**.
+Всего в проекте **158 тестов**.
 
-Последний полный запуск после чистого создания схемы через Flyway:
+Последний полный запуск:
 
 ```text
-Tests run: 145
+Tests run: 158
 Failures: 0
 Errors: 0
 Skipped: 0
 BUILD SUCCESS
 ```
 
-Пароль PostgreSQL передаётся через переменную окружения `DB_PASSWORD`.
-Если открыт новый PowerShell-сеанс, переменную нужно задать заново локально перед запуском приложения или тестов.
-Реальный пароль не хранится в Git и не должен попадать в документацию.
-
-При первом запуске тестов после перехода на Flyway была получена ошибка PostgreSQL `SQL State 28P01`.
-Причиной оказалась отсутствующая `DB_PASSWORD` в текущем PowerShell-сеансе, а не ошибка migration.
-После восстановления переменной все 145 тестов прошли успешно.
-
-Изменения документации должны коммититься отдельно от Java-кода.
+Изменения документации коммитятся отдельно от Java-кода.
 
 ---
 
-## Реализованный функционал
-
-### Среда и Git
+## Среда и Git
 
 - [x] JDK 21 установлен и используется проектом.
 - [x] Настроен `JAVA_HOME`.
@@ -128,68 +113,70 @@ BUILD SUCCESS
 - [x] Создан публичный GitHub-репозиторий `internship-tracker-api`.
 - [x] Ветка `main` связана с `origin/main`.
 - [x] Настроен `.gitignore`.
-- [x] В Git не попадают `.idea/`, `target/`, реальные пароли и другие секреты.
-- [x] Пароль PostgreSQL передаётся через переменную окружения `DB_PASSWORD`.
-- [x] Для обычного diff используется `git --no-pager diff`.
-- [x] Для staged diff используется `git --no-pager diff --cached`.
-- [x] Code-коммиты небольшие и осмысленные.
-- [x] Documentation-коммиты не смешиваются с Java-кодом.
-- [x] После `git push` проверяется чистый working tree.
-
-### Spring Boot и PostgreSQL
-
-- [x] Создан Spring Boot 4.1.0 проект на Java 21 и Maven.
-- [x] Добавлен Spring Web.
-- [x] Реализован `GET /api/hello`.
-- [x] Приложение запускается на порту 8080.
-- [x] Добавлены Spring Data JPA и PostgreSQL JDBC Driver.
-- [x] Создана база данных `internship_tracker`.
-- [x] Создана роль `internship_tracker_app`.
 - [x] Секреты не хранятся в Git.
-- [x] Пароль базы данных передаётся через переменную окружения.
-- [x] Repository-тесты выполняются на PostgreSQL.
+- [x] Пароль PostgreSQL передаётся через `DB_PASSWORD`.
+- [x] Перед коммитами проверяются `git status`, обычный diff, staged diff и `diff --check`.
+- [x] Code- и documentation-коммиты разделяются.
+- [x] После push проверяется чистый working tree.
 
-### Flyway и управление схемой
+Полезные команды:
 
-- [x] Подключён `spring-boot-starter-flyway`.
-- [x] Для PostgreSQL подключён `org.flywaydb:flyway-database-postgresql`.
-- [x] Создан каталог `src/main/resources/db/migration`.
-- [x] Создана первая versioned migration `V1__create_initial_schema.sql`.
-- [x] `V1` создаёт таблицы `companies`, `vacancies` и `applications`.
-- [x] Порядок создания учитывает foreign key: `companies → vacancies → applications`.
-- [x] В migration зафиксированы `PRIMARY KEY`, `FOREIGN KEY`, `NOT NULL`, длины `VARCHAR` и timestamp-типы.
-- [x] Для `WorkFormat` и `ApplicationStatus` сохранены database `CHECK` constraints.
-- [x] Hibernate DDL-режим изменён с `update` на `validate`.
-- [x] Hibernate больше не должен автоматически изменять схему.
-- [x] Старая dev-схема была удалена после проверки, что в ней нет важных данных.
-- [x] Пустая PostgreSQL-схема успешно воспроизведена через Flyway.
-- [x] Flyway создал служебную таблицу `flyway_schema_history`.
-- [x] В `flyway_schema_history` зарегистрирована успешная migration версии `1`.
-- [x] После чистого применения `V1` все 145 тестов проходят.
-
-Текущая цепочка управления схемой:
-
-```text
-V1 / будущие V2, V3...
-→ Flyway
-→ PostgreSQL schema
-→ Hibernate validate
-→ Entity
+```powershell
+git status --short
+git --no-pager diff --check
+git --no-pager diff
+git --no-pager diff --cached --check
+git --no-pager diff --cached
+git status
 ```
 
-### Company
+---
 
-Для `Company` завершён полный CRUD:
+## Spring Boot и PostgreSQL
+
+- [x] Spring Boot 4.1.0.
+- [x] Java 21.
+- [x] Maven.
+- [x] Spring Web.
+- [x] Spring Data JPA / Hibernate.
+- [x] PostgreSQL.
+- [x] Bean Validation.
+- [x] `GET /api/hello`.
+- [x] Приложение запускается на порту 8080.
+- [x] База `internship_tracker` настроена.
+- [x] Repository tests могут работать с реальным PostgreSQL.
+- [x] Flyway управляет схемой.
+- [x] Hibernate проверяет схему через `ddl-auto=validate`.
+
+PostgreSQL CLI:
+
+```text
+C:\Program Files\PostgreSQL\18\bin\psql.exe
+```
+
+Пароль Spring datasource:
+
+```properties
+spring.datasource.password=${DB_PASSWORD}
+```
+
+Секреты и реальные `.env` не коммитить.
+
+---
+
+## Company
+
+Полный CRUD завершён.
 
 - [x] Entity и timestamps.
-- [x] Repository и repository-тест.
-- [x] Service и unit-тесты.
+- [x] Repository и repository test.
+- [x] Service и unit tests.
 - [x] Request/response DTO.
-- [x] Ручной Mapper и mapper-тесты.
+- [x] Ручной Mapper и mapper tests.
 - [x] Bean Validation.
 - [x] `ResourceNotFoundException`.
 - [x] `ErrorResponse` и `GlobalExceptionHandler`.
-- [x] Controller и `MockMvc`-тесты.
+- [x] Controller и MockMvc tests.
 
 Endpoint:
 
@@ -201,24 +188,19 @@ PUT    /api/companies/{id}
 DELETE /api/companies/{id}
 ```
 
-### Vacancy
+---
 
-Для `Vacancy` завершён полный CRUD:
+## Vacancy
 
-- [x] Enum `WorkFormat`.
-- [x] Значения `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
-- [x] Entity `Vacancy`.
-- [x] Связь `Many-to-One` с `Company` через `company_id`.
-- [x] Используется `FetchType.LAZY`.
-- [x] Enum хранится через `EnumType.STRING`.
-- [x] Реализовано правило `null workFormat → NOT_SPECIFIED`.
-- [x] Repository и repository-тест.
-- [x] Request/response DTO и Bean Validation.
-- [x] Ручной Mapper и mapper-тесты.
-- [x] Service и unit-тесты.
-- [x] Controller и `MockMvc`-тесты.
-- [x] `404 Not Found` для отсутствующей Vacancy.
-- [x] `404 Not Found` для отсутствующей Company при создании и обновлении.
+Полный CRUD завершён.
+
+- [x] `WorkFormat`: `OFFICE`, `REMOTE`, `HYBRID`, `NOT_SPECIFIED`.
+- [x] `Many-to-One` с `Company`.
+- [x] `FetchType.LAZY`.
+- [x] `EnumType.STRING`.
+- [x] `null workFormat → NOT_SPECIFIED`.
+- [x] Repository, Service, Controller, DTO, Mapper и tests.
+- [x] `404` для отсутствующих `Vacancy` и `Company`.
 
 Endpoint:
 
@@ -230,118 +212,34 @@ PUT    /api/vacancies/{id}
 DELETE /api/vacancies/{id}
 ```
 
-### Application
+---
 
-Для `Application` завершены CRUD, бизнес-правила, пагинация, сортировка, динамическая фильтрация и простая статистика.
+## Application
 
-#### Модель и CRUD
+### CRUD и модель
 
-- [x] Enum `ApplicationStatus`.
-- [x] Статусы `PLANNED`, `APPLIED`, `TEST_TASK`, `INTERVIEW`, `OFFER`, `REJECTED`, `WITHDRAWN`.
-- [x] Entity `Application`.
-- [x] Связь `Many-to-One` с `Vacancy` через `vacancy_id`.
-- [x] Используется `FetchType.LAZY`.
-- [x] Статус хранится через `EnumType.STRING`.
-- [x] Поля `appliedAt`, `nextContactAt`, `notes`.
-- [x] Ограничение `notes` до 2000 символов.
-- [x] Repository и repository-тест.
-- [x] `ApplicationRequest`.
-- [x] `ApplicationUpdateRequest`.
-- [x] `ApplicationStatusUpdateRequest`.
-- [x] `ApplicationResponse`.
-- [x] Ручной `ApplicationMapper` и mapper-тесты.
-- [x] Service и unit-тесты.
-- [x] Controller и `MockMvc`-тесты.
-- [x] Создание, получение, обновление и удаление.
-- [x] Отдельное изменение статуса через `PATCH`.
-- [x] Статус не изменяется через обычный `PUT`.
-
-#### Бизнес-правила
-
-- [x] `nextContactAt` не может быть раньше `appliedAt`.
-- [x] Для статусов, отличных от `PLANNED`, поле `appliedAt` обязательно.
-- [x] Проверяются допустимые переходы статусов.
-- [x] Повторная установка текущего статуса идемпотентна.
-- [x] При повторной установке текущего статуса не вызывается лишний `save()`.
-- [x] Бизнес-ошибки возвращаются в едином формате `400 Bad Request`.
-
-#### Пагинация и сортировка
-
-- [x] Пагинация через `Page`, `Pageable` и `PageRequest`.
-- [x] Собственный generic record `PagedResponse<T>`.
-- [x] Entity не возвращаются в paged response.
-- [x] Элементы страницы преобразуются в `ApplicationResponse`.
-- [x] Значения пагинации по умолчанию.
-- [x] Проверка границ `page` и `size`.
-- [x] Пустая страница за пределами данных возвращается с `200 OK`.
-- [x] Сортировка объединена с пагинацией.
-- [x] Поддерживаются направления `ASC` и `DESC`.
-- [x] Используется allow-list разрешённых полей сортировки.
-- [x] Неверное поле сортировки возвращает управляемый `400 Bad Request`.
-- [x] Неверное направление сортировки возвращает управляемый `400 Bad Request`.
-
-#### Динамическая фильтрация
-
-Поддерживаются необязательные фильтры:
-
-- [x] `status`.
-- [x] `vacancyId`.
-- [x] `companyId`.
-- [x] `appliedAtFrom`.
-- [x] `appliedAtTo`.
-- [x] `workFormat`.
-- [x] `nextContactAtFrom`.
-- [x] `nextContactAtTo`.
-
-Реализация:
-
-- [x] Фильтры собираются через `Specification<Application>`.
-- [x] Repository расширяет `JpaSpecificationExecutor<Application>`.
-- [x] Условия добавляются независимо и объединяются через `and(...)`.
-- [x] Для отсутствующих фильтров ограничения не добавляются.
-- [x] Для начального состояния используется `Specification.unrestricted()`.
-- [x] Service выполняет один `findAll(specification, pageable)` для любой комбинации фильтров.
-- [x] Старые derived query для комбинаций фильтров удалены.
-- [x] Фильтр по компании использует путь `Application.vacancy.company.id`.
-- [x] Фильтр по формату работы использует путь `Application.vacancy.workFormat`.
-- [x] Нижние границы дат используют `greaterThanOrEqualTo(...)`.
-- [x] Верхние границы дат используют `lessThanOrEqualTo(...)`.
-- [x] Диапазоны `appliedAt` и `nextContactAt` включающие.
-- [x] Противоречивые диапазоны отклоняются до обращения к Repository.
-- [x] Для дат используется ISO date-time через `@DateTimeFormat`.
-- [x] Неизвестные enum-значения возвращают управляемый `400 Bad Request`.
-- [x] `MethodArgumentTypeMismatchException` обрабатывается централизованно.
-- [x] При ошибке HTTP-преобразования Service и Mapper не вызываются.
-- [x] Параметры фильтрации объединены в immutable record `ApplicationFilter`.
-- [x] Controller создаёт `ApplicationFilter` и передаёт его в Service.
-- [x] Service и `ApplicationSpecifications` используют один параметр-объект вместо длинной основной сигнатуры.
-- [x] Старые перегрузки Service временно сохранены для обратной совместимости существующих вызовов и тестов.
-- [x] Specification-, Service- и Controller-тесты покрывают отдельные фильтры и комбинации.
-
-#### Статистика
-
-- [x] Создан `ApplicationStatisticsResponse`.
-- [x] Реализован `GET /api/applications/statistics`.
-- [x] Ответ содержит общее количество откликов.
-- [x] Ответ содержит количество для каждого `ApplicationStatus`.
-- [x] Для распределения по статусам используется `EnumMap<ApplicationStatus, Long>`.
-- [x] Статусы с количеством `0` также присутствуют в ответе.
-- [x] Repository использует derived query `countByStatus(...)`.
-- [x] Service-тест проверяет все статусы и обращения к Repository.
-- [x] Controller-тест проверяет HTTP status, Content-Type и полный JSON.
-- [x] Mapper при построении статистики не используется.
+- [x] `ApplicationStatus`:
+  - `PLANNED`;
+  - `APPLIED`;
+  - `TEST_TASK`;
+  - `INTERVIEW`;
+  - `OFFER`;
+  - `REJECTED`;
+  - `WITHDRAWN`.
+- [x] `Many-to-One` с `Vacancy`.
+- [x] `FetchType.LAZY`.
+- [x] `EnumType.STRING`.
+- [x] `appliedAt`, `nextContactAt`, `notes`.
+- [x] Repository, DTO, Mapper, Service, Controller и tests.
+- [x] POST / GET / PUT / DELETE.
+- [x] Отдельный `PATCH` для изменения статуса.
+- [x] Обычный `PUT` не меняет статус.
 
 Endpoint:
 
 ```text
 POST   /api/applications
-GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC
-GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&status=INTERVIEW
-GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&vacancyId=20
-GET    /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC&companyId=5
-GET    /api/applications?page=0&size=10&sortBy=appliedAt&direction=ASC&appliedAtFrom=2026-07-01T00:00:00&appliedAtTo=2026-07-31T23:59:00
-GET    /api/applications?page=0&size=10&workFormat=REMOTE
-GET    /api/applications?page=0&size=10&nextContactAtFrom=2026-08-01T00:00:00&nextContactAtTo=2026-08-31T23:59:00
+GET    /api/applications
 GET    /api/applications/statistics
 GET    /api/applications/{id}
 PUT    /api/applications/{id}
@@ -349,30 +247,17 @@ PATCH  /api/applications/{id}/status
 DELETE /api/applications/{id}
 ```
 
----
+### Бизнес-правила
 
-## Бизнес-правила Application
+- [x] `nextContactAt >= appliedAt`.
+- [x] Равные даты разрешены.
+- [x] Для статусов кроме `PLANNED` требуется `appliedAt`.
+- [x] `PLANNED` может существовать без `appliedAt`.
+- [x] Переходы статусов проверяются в Service.
+- [x] Повторная установка текущего статуса идемпотентна.
+- [x] При неизменном статусе не вызываются `setStatus()` и лишний `save()`.
 
-### Согласованность дат
-
-- `nextContactAt` не может быть раньше `appliedAt`.
-- Одинаковые значения дат разрешены.
-- Если одна из дат отсутствует, порядок дат не нарушается.
-- Для любого статуса, кроме `PLANNED`, поле `appliedAt` обязательно.
-- `PLANNED` может существовать без `appliedAt`.
-- Через `PUT` нельзя удалить `appliedAt`, если текущий статус не `PLANNED`.
-- Нельзя перейти из `PLANNED` в активный статус без `appliedAt`.
-
-Сообщения ошибок:
-
-```text
-Next contact date must not be before applied date
-Applied date is required for status APPLIED
-```
-
-Второе сообщение формируется динамически для конкретного статуса.
-
-### Переходы статусов
+Переходы:
 
 ```text
 PLANNED   → APPLIED, WITHDRAWN
@@ -384,50 +269,18 @@ REJECTED  → нет переходов
 WITHDRAWN → нет переходов
 ```
 
-Повторная установка текущего статуса разрешена.
-
-При повторной установке Service:
-
-- возвращает текущий `Application`;
-- не вызывает `setStatus()`;
-- не вызывает `save()`.
-
-Запрещённый переход возвращает сообщение вида:
-
-```text
-Cannot change status from PLANNED to INTERVIEW
-```
-
-Правила переходов находятся в `ApplicationService` и реализованы через исчерпывающий `switch expression`.
-
 ---
 
 ## Пагинация, сортировка и фильтрация Application
 
-### HTTP-контракт
+### Пагинация
 
-Базовый запрос:
-
-```text
-GET /api/applications?page=0&size=10&sortBy=createdAt&direction=DESC
-```
-
-Доступные query-параметры:
-
-```text
-page                — номер страницы, начиная с 0
-size                — максимальное количество элементов на странице
-sortBy              — разрешённое поле сортировки
-direction           — ASC или DESC
-status              — необязательный ApplicationStatus
-vacancyId           — необязательный идентификатор Vacancy
-companyId           — необязательный идентификатор Company
-appliedAtFrom       — необязательная нижняя граница appliedAt в ISO date-time
-appliedAtTo         — необязательная верхняя граница appliedAt в ISO date-time
-workFormat          — необязательный WorkFormat вакансии
-nextContactAtFrom   — необязательная нижняя граница nextContactAt в ISO date-time
-nextContactAtTo     — необязательная верхняя граница nextContactAt в ISO date-time
-```
+- [x] `Page`, `Pageable`, `PageRequest`.
+- [x] Собственный `PagedResponse<T>`.
+- [x] Entity и Spring `Page` не возвращаются напрямую клиенту.
+- [x] `page >= 0`.
+- [x] `1 <= size <= 100`.
+- [x] Пустая страница за пределами данных возвращает `200 OK`.
 
 Значения по умолчанию:
 
@@ -438,14 +291,9 @@ sortBy=createdAt
 direction=DESC
 ```
 
-Ограничения:
+### Сортировка
 
-```text
-page >= 0
-1 <= size <= 100
-```
-
-Разрешённые поля сортировки:
+Разрешённые поля:
 
 ```text
 createdAt
@@ -454,56 +302,14 @@ nextContactAt
 status
 ```
 
-### Формат ответа
+- [x] `ASC` и `DESC`.
+- [x] Allow-list полей сортировки.
+- [x] Неверное поле → управляемый `400`.
+- [x] Неверное направление → управляемый `400`.
 
-Controller возвращает:
+### Фильтрация
 
-```java
-PagedResponse<ApplicationResponse>
-```
-
-Поля:
-
-```text
-content
-page
-size
-totalElements
-totalPages
-```
-
-### Текущий поток выполнения
-
-```text
-ApplicationController
-→ создаёт ApplicationFilter
-→ ApplicationService.getAllApplications(page, size, sortBy, direction, filter)
-→ проверяет sortBy и direction
-→ создаёт Sort и PageRequest
-→ проверяет диапазоны appliedAt и nextContactAt
-→ ApplicationSpecifications.withFilters(filter)
-→ applicationRepository.findAll(specification, pageable)
-→ Page<Application>
-→ ApplicationMapper.toResponse(...)
-→ PagedResponse<ApplicationResponse>
-```
-
-Правила:
-
-- Spring `Page<Application>` не возвращается клиенту напрямую.
-- `Application` Entity не возвращается клиенту напрямую.
-- Mapper преобразует один `Application`.
-- Service организует преобразование элементов страницы.
-- Controller получает готовый `PagedResponse<ApplicationResponse>`.
-- Controller не строит Specification.
-- Service не содержит веток для всех комбинаций фильтров.
-- Repository не содержит отдельный метод для каждой комбинации фильтров.
-- Один и тот же `Pageable` передаётся в Repository вместе со Specification.
-- Страница за пределами данных возвращает пустой `content`, а не `404`.
-
-### ApplicationFilter
-
-Текущий параметр-объект:
+`ApplicationFilter`:
 
 ```java
 public record ApplicationFilter(
@@ -519,29 +325,26 @@ public record ApplicationFilter(
 }
 ```
 
-Назначение:
+Поддерживаются:
 
-- уменьшить длинный список параметров основного Service-метода;
-- упростить добавление новых фильтров;
-- передавать связанные параметры как один неизменяемый объект;
-- использовать автоматически созданные `equals`, `hashCode` и `toString` в тестах и отладке.
+- [x] `status`.
+- [x] `vacancyId`.
+- [x] `companyId`.
+- [x] `appliedAtFrom`.
+- [x] `appliedAtTo`.
+- [x] `workFormat`.
+- [x] `nextContactAtFrom`.
+- [x] `nextContactAtTo`.
 
-Старый шестипараметровый конструктор record временно сохранён для совместимости существующих вызовов.
-
-### Валидация диапазонов
-
-Сообщения ошибок:
+Используется:
 
 ```text
-Applied at from must not be after applied at to
-Next contact at from must not be after next contact at to
+ApplicationSpecifications
++ Specification<Application>
++ JpaSpecificationExecutor<Application>
 ```
 
-Равные границы разрешены. Ошибка возникает только при `from.isAfter(to)`.
-
-### Динамическая фильтрация через Specification
-
-Поддерживаемые условия:
+Условия:
 
 ```text
 Application.status = status
@@ -554,216 +357,326 @@ Application.nextContactAt >= nextContactAtFrom
 Application.nextContactAt <= nextContactAtTo
 ```
 
-`ApplicationSpecifications.withFilters(filter)` начинает с `Specification.unrestricted()` и добавляет через `and(...)`
-только условия для ненулевых полей `ApplicationFilter`.
+Границы диапазонов включающие.
 
-`Specification<Application>` описывает условие, но не выполняет запрос.
-Запрос выполняется при вызове Repository.
-
-### Статистика Application
-
-HTTP-запрос:
+Неверные диапазоны отклоняются до Repository:
 
 ```text
-GET /api/applications/statistics
+Applied at from must not be after applied at to
+Next contact at from must not be after next contact at to
 ```
 
-Формат ответа:
+---
 
-```json
-{
-  "total": 12,
-  "byStatus": {
-    "PLANNED": 2,
-    "APPLIED": 4,
-    "TEST_TASK": 1,
-    "INTERVIEW": 2,
-    "OFFER": 1,
-    "REJECTED": 2,
-    "WITHDRAWN": 0
-  }
-}
-```
+## Application statistics
+
+- [x] `GET /api/applications/statistics`.
+- [x] `ApplicationStatisticsResponse`.
+- [x] Общее количество.
+- [x] Количество для каждого `ApplicationStatus`.
+- [x] `EnumMap<ApplicationStatus, Long>`.
+- [x] Нулевые статусы присутствуют в ответе.
+- [x] `countByStatus(...)`.
 
 Текущая реализация выполняет:
 
 ```text
-1 запрос applicationRepository.count()
-7 запросов applicationRepository.countByStatus(status)
+1 x count()
+7 x countByStatus(status)
 ```
 
-Итого: **8 запросов к базе данных**.
+Итого: **8 запросов**.
 
-Это допустимая простая первая версия. Позднее статистику следует оптимизировать одним агрегирующим запросом
-с `GROUP BY status`. После такого запроса Service всё равно должен добавить в `EnumMap` отсутствующие статусы со значением `0`.
+Оптимизация через `GROUP BY status` отложена.
 
 ---
 
-## Архитектурные правила
+## Flyway
+
+Этап завершён.
+
+### Зависимости
+
+Используются:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-flyway</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-database-postgresql</artifactId>
+</dependency>
+```
+
+На момент настройки использовались `flyway-core 12.4.0` и `flyway-database-postgresql 12.4.0`.
+
+### Migration
+
+Путь:
 
 ```text
-HTTP request → Controller → Service → Repository → PostgreSQL
+src/main/resources/db/migration
 ```
 
-- Controller отвечает за HTTP-запросы и ответы.
-- Service содержит бизнес-логику и организует операции.
-- Repository отвечает за доступ к данным.
-- Entity описывает модель хранения.
-- DTO описывает внешний API-контракт.
-- Mapper преобразует Entity и DTO.
-- Specification описывает динамические условия выборки.
-- Controller не обращается к Repository напрямую.
-- Mapper не обращается к Repository.
-- Entity не возвращаются клиенту напрямую.
-- Spring `Page` не возвращается клиенту напрямую.
-- Используется constructor injection.
-- Ошибки обрабатываются централизованно.
-- Маппинг пишется вручную.
-- Правила дат и переходов статусов находятся в Service.
-- Допустимость полей сортировки проверяется в Service.
-- Controller принимает query-параметры и создаёт `ApplicationFilter`, но не строит Specification.
-- Service получает Specification из `ApplicationSpecifications`.
-- Repository выполняет Specification вместе с `Pageable`.
-- Отсутствующие фильтры представлены значениями `null` внутри `ApplicationFilter`.
-- Derived query используются только для простых понятных операций, например `countByStatus(...)`.
-- Универсальные CRUD-, sorting- и filtering-классы пока не добавляются.
+Первая migration:
+
+```text
+V1__create_initial_schema.sql
+```
+
+Она создаёт:
+
+```text
+companies
+vacancies
+applications
+```
+
+В migration зафиксированы:
+
+- identity primary keys;
+- foreign keys;
+- `NOT NULL`;
+- длины строковых полей;
+- enum `CHECK` constraints;
+- порядок создания таблиц с учётом FK.
+
+Hibernate больше не создаёт схему автоматически:
+
+```properties
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Источник истины для схемы:
+
+```text
+Flyway migrations
+```
+
+Hibernate только валидирует соответствие Entity существующей схеме.
+
+### Проверка
+
+- [x] V1 успешно применена к пустой PostgreSQL database.
+- [x] После применения V1 приложение / tests проходят Hibernate validation.
+- [x] `flyway_schema_history` содержит успешную V1.
+- [x] Полная пересборка из пустой схемы проверена.
+
+### Важный инцидент и правило
+
+После первого применения V1 её файл был переформатирован, из-за чего Flyway обнаружил checksum mismatch.
+
+Для локальной development DB без важных данных было принято решение не использовать `repair`, а удалить созданную учебную схему и `flyway_schema_history`, затем повторно применить текущую V1.
+
+Правило на будущее:
+
+```text
+После применения versioned migration не редактировать её без необходимости.
+Новые изменения схемы оформлять как V2, V3, ...
+```
 
 ---
 
-## Что уже понимается уверенно
+## Тестирование
+
+### Unit tests
+
+Используются:
+
+- JUnit 5;
+- Mockito;
+- mapper tests;
+- Service tests;
+- `ApplicationSpecificationsTest` с mocked Criteria API.
+
+`ApplicationSpecificationsTest` проверяет, что Specification правильно строит `Predicate`, но не проверяет реальный SQL.
+
+### Controller tests
+
+Используются:
+
+```text
+@WebMvcTest
+MockMvc
+```
+
+Проверяются:
+
+- HTTP status;
+- Content-Type;
+- JSON;
+- validation errors;
+- преобразование query-параметров;
+- вызовы Service.
+
+### Repository / integration tests
+
+`ApplicationRepositoryTest` использует:
+
+```java
+@DataJpaTest
+@AutoConfigureTestDatabase(
+        replace = AutoConfigureTestDatabase.Replace.NONE
+)
+```
+
+Это означает, что тесты используют реальный настроенный PostgreSQL, а не автоматически заменённую embedded DB.
+
+Проверенная цепочка:
+
+```text
+ApplicationSpecifications
+→ ApplicationRepository
+→ Spring Data JPA
+→ Hibernate
+→ SQL
+→ PostgreSQL
+```
+
+Покрыто реальными integration tests:
+
+- [x] сохранение `Application`;
+- [x] фильтр по `status`;
+- [x] фильтр по `companyId`;
+- [x] фильтр по `workFormat`;
+- [x] диапазон `appliedAt`;
+- [x] фильтр по `vacancyId`;
+- [x] диапазон `nextContactAt`;
+- [x] несколько фильтров одновременно;
+- [x] отсутствие фильтров → все записи;
+- [x] включение `appliedAtFrom` и `appliedAtTo`;
+- [x] включение `nextContactAtFrom` и `nextContactAtTo`;
+- [x] filtering + sorting;
+- [x] filtering + pagination;
+- [x] filtering + sorting + pagination вместе.
+
+Для диапазонов используются negative controls:
+
+```text
+before → не входит
+from   → входит
+inside → входит
+to     → входит
+after  → не входит
+```
+
+Для сортировки порядок проверяется только тогда, когда явно передан `Sort`.
+
+Entity в integration assertions сравниваются по `id`, а не как объекты целиком, чтобы тест не зависел от `equals/hashCode` JPA Entity.
+
+Для повторяющегося setup внутри `ApplicationRepositoryTest` используются private helpers:
+
+```text
+saveCompany(...)
+saveVacancy(...)
+saveApplication(...)
+```
+
+Testcontainers пока не используется.
+
+---
+
+## Что понимается уверенно
 
 ### Git
 
-- working tree и staging area;
-- `git status`, `git add`, `git commit`, `git push`;
+- working tree;
+- staging area;
+- `status`, `add`, `commit`, `push`;
 - обычный и staged diff;
-- маленькие code-коммиты;
-- отдельные documentation-коммиты;
-- работа с untracked-файлами;
-- проверка отсутствия секретов;
-- проверка чистого working tree после push.
+- `diff --check`;
+- отдельные code/documentation commits;
+- проверка чистого working tree.
 
-### Java, Spring и архитектура
+### Архитектура и Spring
 
-- назначение Controller, Service, Repository, Entity, DTO, Mapper и Specification;
-- constructor injection;
+- Controller → Service → Repository;
+- Entity vs DTO;
+- Mapper;
 - Bean Validation;
-- единая обработка `400` и `404`;
-- различие HTTP- и бизнес-валидации;
-- почему Entity не возвращаются напрямую;
-- request DTO и response DTO;
-- отдельная операция изменения статуса;
-- идемпотентность;
-- enum и `switch expression`;
-- назначение `PagedResponse<T>`;
-- почему Controller не возвращает `Page<Application>`;
-- почему размер страницы ограничен;
-- почему пустая страница не является `404`;
-- зачем нужен allow-list полей сортировки;
-- различие inheritance, overloading и delegation;
-- почему перегрузки делегируют только в одном направлении;
-- что означает `null` для необязательного фильтра;
-- почему путь к компании идёт через `vacancy.company.id`;
-- почему путь к формату работы идёт через `vacancy.workFormat`;
-- как работают включающие границы `>=` и `<=`;
-- почему противоречивые диапазоны проверяются в Service;
-- почему неизвестный enum не доходит до Service;
-- назначение `MethodArgumentTypeMismatchException`;
-- зачем использовать parameter object `ApplicationFilter`;
-- что record создаёт constructor, accessors, `equals`, `hashCode` и `toString`;
-- почему Controller обращается к Service, а Service — к Repository;
-- как Spring Data разбирает имя `countByStatus`;
-- почему для enum-ключей подходит `EnumMap`;
-- почему текущая статистика выполняет восемь запросов;
-- как `GROUP BY status` уменьшит количество запросов;
-- что database migration переводит БД из одного известного состояния в следующее;
-- чем Flyway migration отличается от `spring.jpa.hibernate.ddl-auto=update`;
-- что `ddl-auto=validate` проверяет схему, но не создаёт и не изменяет таблицы;
-- зачем migrations хранятся в Git;
-- зачем Flyway нужна таблица `flyway_schema_history`;
-- почему порядок `companies → vacancies → applications` важен из-за foreign key;
-- почему Flyway и Hibernate `validate` выполняют разные роли.
+- централизованная обработка ошибок;
+- отдельная бизнес-операция изменения статуса;
+- `ApplicationFilter` как parameter object;
+- `Specification` как описание условия;
+- Repository как место выполнения запроса.
 
-### JPA и Spring Data
+### JPA / Spring Data
 
-- основные JPA-аннотации;
-- `Many-to-One`, `FetchType.LAZY`;
+- `Many-to-One`;
+- `FetchType.LAZY`;
 - `EnumType.STRING`;
-- `findById()`, `findAll()`, `save()`, `delete()`;
-- `Optional` и `orElseThrow()`;
-- базовое назначение `Page`, `Pageable`, `PageRequest` и `Sort`;
-- `JpaSpecificationExecutor<Application>`;
-- `Specification<Application>` описывает условие, а не загружает данные;
-- `Specification.unrestricted()` означает отсутствие ограничений;
-- `root.get(...)` создаёт путь к полю или связи;
-- `criteriaBuilder.equal(...)` создаёт условие равенства;
-- `greaterThanOrEqualTo(...)` и `lessThanOrEqualTo(...)` создают включающие границы;
-- `and(...)` объединяет условия;
-- derived query method разбирается Spring Data по имени метода.
+- `Optional`;
+- `Page`, `Pageable`, `PageRequest`, `Sort` на базовом уровне;
+- `JpaSpecificationExecutor`;
+- `Specification.unrestricted()`;
+- `equal`, `greaterThanOrEqualTo`, `lessThanOrEqualTo`, `and`;
+- derived query methods.
 
 ### Тестирование
 
-- Arrange, Act, Assert;
-- Mockito: `when`, `verify`, `never`, `verifyNoInteractions`;
-- правильная форма `verify(mock).method()`;
-- различие `assertSame` и `assertEquals`;
-- Service unit-тесты;
-- mapper-тесты;
-- `@WebMvcTest` и `MockMvc`;
-- проверка HTTP status, Content-Type и JSON;
-- тестирование непустой и пустой страницы;
-- проверка `Pageable` с ожидаемым `Sort`;
-- `ApplicationSpecificationsTest` проверяет построение условий;
-- `ApplicationServiceTest` проверяет бизнес-логику и взаимодействия;
-- `ApplicationControllerTest` проверяет внешний HTTP-контракт;
-- Mapper не должен вызываться при построении статистики.
+- Arrange / Act / Assert;
+- Mockito;
+- MockMvc;
+- различие unit test и integration test на практическом уровне;
+- почему mocked Criteria test не заменяет PostgreSQL integration test;
+- зачем нужны matching и non-matching rows;
+- почему фильтр должен доказывать не только включение, но и исключение;
+- почему boundary tests нужны отдельно;
+- почему без `Sort` нельзя рассчитывать на порядок SQL result;
+- базовая семантика `Page` metadata;
+- совместная работа `Specification + Pageable + Sort`.
+
+### Flyway
+
+- Flyway является источником истины для схемы;
+- Hibernate `validate` не создаёт таблицы;
+- migration хранится в Git;
+- checksum защищает применённую migration от незаметного изменения;
+- будущие изменения схемы должны идти через V2/V3, а не редактирование V1.
 
 ---
 
 ## Что понимается частично и требует повторения
 
-- различие unit-, controller-, repository- и интеграционных тестов;
-- LAZY-связи вне активной JPA-сессии;
-- транзакции и `@Transactional`;
-- различие `MethodArgumentNotValidException` и `HandlerMethodValidationException`;
-- внутреннее устройство `Page`, `Pageable`, `PageRequest` и `Sort`;
-- поведение сортировки по nullable-полям;
-- порядок `NULL` при `ASC` и `DESC` в PostgreSQL;
-- стабильность сортировки при одинаковых значениях поля;
-- Criteria API глубже используемых `Path`, `Predicate`, `equal`, сравнений и `and`;
-- назначение `CriteriaQuery<?> query` в сложных Specification;
-- выбор между derived query, JPQL, Specification и QueryDSL;
-- projection для агрегирующих запросов;
-- JPQL-запрос с `GROUP BY`;
-- интеграционное тестирование Specification на изолированной базе;
-- правила дальнейшего развития Flyway migrations: новые `V2`, `V3` и неизменяемость уже применённых versioned migrations;
-- checksum, `validate`, `repair`, baseline и другие более продвинутые возможности Flyway;
-- границы между DTO validation, method validation, Service и базой данных.
+- транзакции и `@Transactional` глубже базового уровня;
+- persistence context и identity JPA Entity;
+- LAZY relationships вне активной сессии;
+- `equals/hashCode` для JPA Entity;
+- Criteria API глубже используемых операций;
+- SQL, который Hibernate генерирует для сложных Specifications;
+- nullable sorting и порядок `NULL` в PostgreSQL;
+- стабильность сортировки при одинаковом `sortBy`;
+- различие `Page`, `Slice` и обычного `List`;
+- Testcontainers lifecycle и интеграция со Spring Boot;
+- стратегия изоляции integration tests;
+- JPQL / projection / `GROUP BY` для статистики;
+- граница между repository integration tests и полноценными application integration tests.
 
 ---
 
 ## Технический долг и ограничения
 
-- Пагинация, сортировка и фильтрация реализованы только для `Application`.
-- Для `Company` и `Vacancy` пагинация, сортировка и фильтрация пока не добавлены.
-- Сохранено несколько старых перегрузок `getAllApplications(...)`; позднее их можно сократить после стабилизации API.
-- Статистика выполняет восемь запросов к базе данных.
-- Статистику позднее можно оптимизировать одним агрегирующим запросом с `GROUP BY status`.
-- Unit-тесты проверяют структуру Specification через моки Criteria API, но нет интеграционного теста реальной фильтрации SQL.
-- Repository-тесты зависят от локально запущенного PostgreSQL; Testcontainers пока не используется.
-- Пока нет дополнительной сортировки по `id` для стабильного порядка при одинаковых значениях основного поля.
-- `PagedResponse<T>` пока не содержит `first`, `last` или `hasNext`.
+- Пагинация, сортировка и фильтрация пока реализованы только для `Application`.
+- Сохранены старые перегрузки `getAllApplications(...)`; позднее можно сократить.
+- Статистика выполняет 8 запросов; `GROUP BY` отложен.
+- Repository integration tests зависят от локально запущенного PostgreSQL.
+- Testcontainers пока не используется.
+- Нет отдельной дополнительной сортировки по `id` для одинаковых значений основного sort field.
+- `PagedResponse<T>` не содержит `first`, `last`, `hasNext`.
 - Method validation возвращает первое найденное сообщение.
 - `fieldErrors` для query-параметров пока пустой.
-- Начальная схема переведена на Flyway; последующие изменения схемы должны оформляться новыми migrations.
 - `spring.jpa.open-in-view` пока не отключён явно.
-- В тестах есть предупреждение Mockito о динамическом подключении Java agent; сборку это сейчас не ломает.
-- В `Company.java` остался wildcard import `jakarta.persistence.*`; исправить отдельным cleanup-коммитом.
+- В тестах есть предупреждение Mockito о dynamic Java agent; сборку не ломает.
+- В `Company.java` остался `import jakarta.persistence.*;`; исправить отдельным cleanup-коммитом.
+- Есть только V1 Flyway migration; будущие изменения схемы должны идти новыми versioned migrations.
 - Нет Swagger/OpenAPI.
 - Нет Dockerfile и `compose.yaml`.
 - Нет Testcontainers.
 - Нет `Interview`.
-- Нет User, Spring Security и JWT.
+- Нет `User`, Spring Security и JWT.
 - Нет GitHub Actions.
 - Нет финального README.
 - Нет истории изменения статусов.
@@ -775,66 +688,69 @@ HTTP request → Controller → Service → Repository → PostgreSQL
 
 ## Следующее задание
 
-Начать этап углублённого тестирования.
+На следующей сессии сначала выбрать следующий уровень тестирования.
 
-### Первый небольшой подшаг
+### Вариант A — Testcontainers
 
-Провести аудит существующих тестов и выбрать первый интеграционный сценарий, который сейчас не покрыт реальной работой с БД.
+Цель:
 
-В первую очередь рассмотреть динамическую фильтрацию `Application` через `Specification`, потому что текущий
-`ApplicationSpecificationsTest` проверяет Criteria API через mocks, но не проверяет фактический SQL на PostgreSQL.
+```text
+Сделать PostgreSQL integration tests воспроизводимыми и независимыми от вручную настроенной локальной базы.
+```
 
-Перед написанием нового теста нужно определить:
+Нужно будет понять:
 
-- чем unit-тест Specification отличается от интеграционного теста Repository/Specification;
-- какой Spring test slice или контекст нужен;
-- какие тестовые данные понадобятся для `Company → Vacancy → Application`;
-- какой один фильтр или небольшую комбинацию фильтров проверить первой;
-- как не превратить первый интеграционный тест в большой сценарий на десятки условий.
+- что такое containerized test dependency;
+- как запускается PostgreSQL container на время tests;
+- откуда Spring получает datasource properties;
+- как Flyway применяется к test database;
+- чем это лучше зависимости от локального PostgreSQL;
+- какие есть затраты по времени запуска и сложности.
+
+### Вариант B — более высокий уровень integration testing
+
+Цель:
+
+```text
+Проверить несколько полных application flows через Spring context и HTTP / database together.
+```
+
+Перед выбором не писать код. Сначала определить, какой риск в проекте важнее закрыть следующим.
 
 ### Ограничения
 
 Пока не нужно:
 
-- добавлять Swagger/OpenAPI;
-- добавлять Docker или Docker Compose;
-- добавлять Spring Security, User или JWT;
-- оптимизировать статистику через `GROUP BY`;
-- исправлять `Company.java` wildcard import внутри тестового feature-коммита;
-- добавлять Testcontainers до отдельного решения о стратегии интеграционных тестов;
-- писать один огромный integration test на весь API.
-
-### Критерии готовности первого подшага
-
-- понятно различие unit-, controller-, repository- и integration tests;
-- выбран один небольшой интеграционный сценарий;
-- тест проверяет реальную работу JPA/Specification с PostgreSQL, а не только mocks;
-- существующие 145 тестов продолжают проходить;
-- новый тест понятен и может быть объяснён своими словами;
-- изменения прошли review и зафиксированы отдельным code-коммитом.
+- добавлять Security/JWT;
+- добавлять frontend;
+- переходить на микросервисы;
+- добавлять Kafka/Redis/Kubernetes;
+- оптимизировать статистику без отдельной задачи;
+- менять V1 migration;
+- добавлять новые abstraction layers для tests без необходимости.
 
 ---
 
-## Вопросы для повторения
+## Вопросы для повторения на следующую сессию
 
-1. Что такое database migration и какую проблему она решает?
-2. Чем Flyway migration отличается от `spring.jpa.hibernate.ddl-auto=update`?
-3. Что делает `spring.jpa.hibernate.ddl-auto=validate` и чего он не делает?
-4. Почему migrations должны храниться в Git?
-5. Для чего Flyway создаёт `flyway_schema_history`?
-6. Почему `companies` создаётся раньше `vacancies`, а `vacancies` раньше `applications`?
-7. Почему `work_format` и `status` хранятся как `VARCHAR`, но дополнительно защищены `CHECK` constraint?
-8. Почему бизнес-правила переходов `ApplicationStatus` не были перенесены в `V1`?
-9. Что нужно будет сделать с БД, если в будущем Entity получит новую сохраняемую колонку?
-10. Почему после появления `V2` нельзя просто бездумно переписывать уже применённую `V1`?
-11. Чем текущий mock-based `ApplicationSpecificationsTest` отличается от интеграционной проверки фильтрации на PostgreSQL?
-12. Почему отсутствие `DB_PASSWORD` привело к падению Flyway до создания `EntityManagerFactory`?
+1. Чем unit test `ApplicationSpecificationsTest` отличается от repository integration test?
+2. Почему наличие нескольких реальных Java-классов само по себе ещё не делает тест интеграционным?
+3. Зачем в filter integration test создавать как matching, так и non-matching records?
+4. Почему `from` и `to` проверяются отдельными boundary scenarios?
+5. Почему нельзя полагаться на порядок `findAll(specification)` без `Sort`?
+6. Что означает `PageRequest.of(1, 2, ...)`?
+7. Чем `page.getTotalElements()` отличается от `page.getContent().size()`?
+8. Почему в integration tests JPA Entity удобнее сравнивать по `id`?
+9. Кто сейчас создаёт схему: Hibernate или Flyway?
+10. Что произойдёт, если изменить уже применённую V1 migration?
+11. Чем локальный PostgreSQL integration test отличается от Testcontainers test?
+12. Какой следующий уровень tests даст проекту больше пользы и почему?
 
 ---
 
 ## Рекомендуемый documentation-коммит
 
-Перед коммитом проверить:
+Перед коммитом:
 
 ```powershell
 git status --short
@@ -842,18 +758,18 @@ git --no-pager diff --check
 git --no-pager diff -- PROJECT_STATUS.md DECISIONS.md
 ```
 
-После проверки:
+После review:
 
 ```powershell
 git add PROJECT_STATUS.md DECISIONS.md
 git --no-pager diff --cached --check
 git --no-pager diff --cached
-git commit -m "Document Flyway migration setup"
+git commit -m "Document integration testing progress"
 git push
 git status
 ```
 
-Ожидаемое состояние после push:
+Ожидаемое состояние:
 
 ```text
 On branch main
