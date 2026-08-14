@@ -1,16 +1,14 @@
 package io.github.koh1o.internshiptrackerapi.repository;
 
+import io.github.koh1o.internshiptrackerapi.configuration.TestcontainersConfiguration;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationFilter;
-import io.github.koh1o.internshiptrackerapi.entity.Application;
-import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
-import io.github.koh1o.internshiptrackerapi.entity.Company;
-import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
-import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
+import io.github.koh1o.internshiptrackerapi.entity.*;
 import io.github.koh1o.internshiptrackerapi.specification.ApplicationSpecifications;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,15 +18,13 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(
         replace = AutoConfigureTestDatabase.Replace.NONE
 )
+@Import(TestcontainersConfiguration.class)
 class ApplicationRepositoryTest {
 
     @Autowired

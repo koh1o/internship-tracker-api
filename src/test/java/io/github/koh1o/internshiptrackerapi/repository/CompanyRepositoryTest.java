@@ -1,21 +1,22 @@
 package io.github.koh1o.internshiptrackerapi.repository;
 
+import io.github.koh1o.internshiptrackerapi.configuration.TestcontainersConfiguration;
+import io.github.koh1o.internshiptrackerapi.entity.Company;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import io.github.koh1o.internshiptrackerapi.entity.Company;
+import org.springframework.context.annotation.Import;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(
         replace = AutoConfigureTestDatabase.Replace.NONE
 )
+@Import(TestcontainersConfiguration.class)
 public class CompanyRepositoryTest {
     @Autowired
     private CompanyRepository companyRepository;
