@@ -507,6 +507,235 @@ Specification + Sort + Pageable + PostgreSQL
 
 ---
 
+## 2026-08-16 — Перевести PostgreSQL integration tests на Testcontainers
+
+### Решение
+
+Использовать PostgreSQL Testcontainer для repository и full application integration tests вместо зависимости от вручную настроенной локальной test database.
+
+Это решение заменяет временное решение от 2026-08-14 оставить integration tests на локальном PostgreSQL.
+
+### Причина
+
+Тесты должны быть воспроизводимыми и не зависеть от:
+
+- локально запущенного PostgreSQL;
+- локальных данных;
+- фиксированного порта;
+- `DB_PASSWORD` в окружении разработчика.
+
+Testcontainers позволяет запускать для tests настоящий PostgreSQL в изолированном временном контейнере.
+
+### Альтернативы
+
+- продолжить использовать локальный PostgreSQL;
+- использовать H2 или другую embedded database;
+- вручную запускать отдельный PostgreSQL container перед tests.
+
+### Последствия
+
+- добавлены test dependencies `spring-boot-testcontainers` и `testcontainers-postgresql`;
+- используется PostgreSQL image `postgres:18-alpine`;
+- tests требуют работающий Docker;
+- test suite больше не зависит от локального PostgreSQL и `DB_PASSWORD`;
+- Flyway применяет migrations к test database;
+- Hibernate валидирует схему контейнера;
+- PostgreSQL container создаётся на время test run и удаляется после него.
+
+---
+
+## 2026-08-16 — Управлять PostgreSQL Testcontainer через Spring bean и @ServiceConnection
+
+### Решение
+
+Создать общую `TestcontainersConfiguration`, объявить `PostgreSQLContainer` как Spring bean и пометить его `@ServiceConnection`.
+
+### Причина
+
+Spring Boot умеет автоматически получать connection details контейнера и использовать их для `DataSource` и Flyway. Общая configuration также устраняет дублирование container setup в test classes.
+
+### Альтернативы
+
+- `@Testcontainers` + `@Container` в каждом test class;
+- вручную передавать datasource properties через `@DynamicPropertySource`;
+- создавать отдельную container configuration для каждого test class.
+
+### Последствия
+
+- `TestcontainersConfiguration` переиспользуется через `@Import(TestcontainersConfiguration.class)`;
+- lifecycle контейнера управляется Spring;
+- `testcontainers-junit-jupiter` в итоговой конфигурации не требуется;
+- repository tests сохраняют `@AutoConfigureTestDatabase(replace = NONE)`, чтобы Spring не заменял PostgreSQL embedded database.
+
+---
+
+## 2026-08-16 — Добавить full application integration tests через MockMvc
+
+### Решение
+
+Добавить отдельный уровень integration testing для `Company`, `Vacancy` и `Application` на основе:
+
+```text
+@SpringBootTest
++ @AutoConfigureMockMvc
++ PostgreSQL Testcontainer
+```
+
+### Причина
+
+`@WebMvcTest` проверяет web layer изолированно, а repository integration tests проверяют persistence layer. Нужны тесты, которые доказывают совместную работу всей основной цепочки приложения.
+
+### Альтернативы
+
+- ограничиться unit, controller и repository tests;
+- запускать реальный HTTP server для каждого integration test;
+- сразу писать внешние end-to-end tests.
+
+### Последствия
+
+Full application integration tests проверяют цепочку:
+
+```text
+MockMvc
+→ Controller
+→ Service
+→ Repository
+→ Hibernate
+→ PostgreSQL
+```
+
+MockMvc не запускает внешний HTTP server, но используется полный Spring context.
+
+Созданы отдельные integration test classes для:
+
+- `Company`;
+- `Vacancy`;
+- `Application`.
+
+---
+
+## 2026-08-16 — Проверять состояние PostgreSQL после изменяющих HTTP-операций
+
+### Решение
+
+В full application integration tests после `POST`, `PUT`, `PATCH` и `DELETE` дополнительно проверять конечное состояние PostgreSQL через Repository.
+
+### Причина
+
+Корректный HTTP status и JSON response сами по себе не доказывают, что данные действительно сохранены, обновлены или удалены. Для ошибочных операций также важно доказать, что состояние БД не было испорчено.
+
+### Альтернативы
+
+- проверять только HTTP status и JSON;
+- проверять внутренние вызовы Repository через Mockito.
+
+### Последствия
+
+- после `POST` проверяется появление записи;
+- после `PUT` и успешного `PATCH` проверяется сохранённое новое состояние;
+- после invalid status transition проверяется сохранение старого status;
+- после `DELETE` проверяется удаление конкретной Entity;
+- для зависимых Entity дополнительно проверяется отсутствие нежелательного cascade delete;
+- Mockito interactions остаются задачей unit tests Service-слоя.
+
+---
+
+## 2026-08-16 — Не скрывать LAZY-проблемы через @Transactional в full integration tests
+
+### Решение
+
+Не добавлять `@Transactional` к full integration test только ради возможности читать lazy-поля detached Entity.
+
+### Причина
+
+При `FetchType.LAZY` Hibernate может вернуть proxy связанной Entity. После завершения session попытка прочитать неинициализированное поле может привести к `LazyInitializationException`.
+
+Добавление `@Transactional` только ради такой assertion удерживало бы session открытой и скрывало бы реальное поведение lazy loading.
+
+### Альтернативы
+
+- добавить `@Transactional` к integration test;
+- заменить `LAZY` на `EAGER`;
+- специально инициализировать связь перед завершением session.
+
+### Последствия
+
+- foreign key в detached Entity проверяется через identifier связанной Entity, например `company.id` или `vacancy.id`;
+- данные связанных Entity проверяются через HTTP response DTO;
+- `FetchType.LAZY` остаётся в production-модели;
+- поведение lazy proxy и `LazyInitializationException` разобрано на практике.
+
+---
+
+## 2026-08-17 — Не дублировать всю матрицу business rules в full integration tests
+
+### Решение
+
+Для `ApplicationIntegrationTest` использовать несколько representative scenarios вместо повторения всех Service unit tests через `@SpringBootTest`.
+
+### Причина
+
+Full integration tests тяжелее и медленнее unit tests. Их задача — доказать совместную работу слоёв и ключевые application flows, а не повторять каждую ветку бизнес-логики.
+
+### Альтернативы
+
+- продублировать все допустимые и недопустимые переходы `ApplicationStatus` через full integration tests;
+- оставить только happy-path CRUD scenarios.
+
+### Последствия
+
+`ApplicationIntegrationTest` покрывает ключевые сценарии:
+
+- valid create;
+- get existing;
+- get missing;
+- create with missing `Vacancy`;
+- `APPLIED` without `appliedAt`;
+- `nextContactAt < appliedAt`;
+- valid transition `APPLIED → INTERVIEW`;
+- invalid transition `APPLIED → OFFER` с проверкой unchanged DB state;
+- idempotent `APPLIED → APPLIED`;
+- `PUT` с изменением Vacancy/dates/notes без изменения status;
+- `DELETE` с сохранением `Vacancy` и `Company`.
+
+Полная матрица status transitions остаётся на уровне unit tests `ApplicationService`.
+
+---
+
+## 2026-08-17 — Считать текущий testing block завершённым
+
+### Решение
+
+После repository integration tests, Testcontainers и full application integration tests для трёх основных сущностей завершить текущий этап тестирования и перейти к Swagger/OpenAPI.
+
+### Причина
+
+В проекте уже есть несколько взаимодополняющих уровней tests:
+
+```text
+unit tests
+controller tests
+repository integration tests
+full application integration tests
+```
+
+Продолжение массового расширения test suite сейчас даст меньше учебной и практической пользы, чем переход к следующему этапу портфолио-проекта.
+
+### Альтернативы
+
+- продолжить расширять full integration tests;
+- сначала полностью рефакторить test setup;
+- сразу перейти к Spring Security/JWT.
+
+### Последствия
+
+- следующий этап — Swagger/OpenAPI;
+- Security/JWT остаётся отложенным;
+- механический refactor повторяющегося integration test setup можно сделать позднее отдельным cleanup/refactor commit;
+- текущий testing block считается завершённым на стабильной рабочей версии.
+
+---
+
 ## Шаблон новой записи
 
 ## YYYY-MM-DD — Название решения
