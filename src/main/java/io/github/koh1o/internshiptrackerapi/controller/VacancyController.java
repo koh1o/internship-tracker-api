@@ -5,6 +5,7 @@ import io.github.koh1o.internshiptrackerapi.dto.vacancy.VacancyResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Vacancy;
 import io.github.koh1o.internshiptrackerapi.mapper.VacancyMapper;
 import io.github.koh1o.internshiptrackerapi.service.VacancyService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/vacancies")
+@Tag(
+        name = "Vacancies",
+        description = "Vacancy management"
+)
 public class VacancyController {
 
     private final VacancyService vacancyService;

@@ -7,11 +7,18 @@ import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatisticsResponse;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationStatusUpdateRequest;
 import io.github.koh1o.internshiptrackerapi.dto.application.ApplicationUpdateRequest;
+import io.github.koh1o.internshiptrackerapi.dto.error.ErrorResponse;
 import io.github.koh1o.internshiptrackerapi.entity.Application;
 import io.github.koh1o.internshiptrackerapi.entity.ApplicationStatus;
 import io.github.koh1o.internshiptrackerapi.entity.WorkFormat;
 import io.github.koh1o.internshiptrackerapi.mapper.ApplicationMapper;
 import io.github.koh1o.internshiptrackerapi.service.ApplicationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -33,6 +40,10 @@ import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/applications")
+@Tag(
+        name = "Applications",
+        description = "Internship application management"
+)
 public class ApplicationController {
 
     private final ApplicationService applicationService;
@@ -139,6 +150,41 @@ public class ApplicationController {
         return response;
     }
 
+    @Operation(
+            summary = "Change application status"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Application status changed successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ApplicationResponse.class
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid status transition or request",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Application not found",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            )
+                    )
+            )
+    })
     @PatchMapping("/{id}/status")
     public ApplicationResponse updateApplicationStatus(
             @PathVariable Long id,

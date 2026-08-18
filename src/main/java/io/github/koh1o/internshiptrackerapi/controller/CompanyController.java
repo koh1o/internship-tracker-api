@@ -6,6 +6,7 @@ import io.github.koh1o.internshiptrackerapi.entity.Company;
 import io.github.koh1o.internshiptrackerapi.exception.ResourceNotFoundException;
 import io.github.koh1o.internshiptrackerapi.mapper.CompanyMapper;
 import io.github.koh1o.internshiptrackerapi.service.CompanyService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/companies")
+@Tag(
+        name = "Companies",
+        description = "Company management"
+)
 public class CompanyController {
     private final CompanyService companyService;
     private final CompanyMapper companyMapper;
