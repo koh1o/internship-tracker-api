@@ -736,6 +736,114 @@ full application integration tests
 
 ---
 
+## 2026-08-18 — Добавить OpenAPI через springdoc без перегрузки controllers
+
+### Решение
+
+Использовать `springdoc-openapi-starter-webmvc-ui` для автоматической генерации OpenAPI description и Swagger UI.
+
+Добавить минимальную общую `OpenApiConfiguration`, `@Tag` для основных controllers и подробные `@Operation` / `@ApiResponses` только для endpoints, где это действительно улучшает понимание контракта.
+
+### Причина
+
+Проекту нужен интерактивный API contract для портфолио, ручной проверки и будущего README. При этом подробные OpenAPI-аннотации на каждом простом CRUD endpoint создавали бы много шума в controller-коде и дублировали бы очевидную информацию.
+
+### Альтернативы
+
+- не добавлять OpenAPI и документировать API только в README;
+- подробно аннотировать каждый endpoint;
+- писать OpenAPI specification вручную в YAML/JSON.
+
+### Последствия
+
+- добавлена dependency `org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0`;
+- доступны `/v3/api-docs` и `/swagger-ui.html`;
+- добавлена `OpenApiConfiguration` с title, version и description;
+- `CompanyController`, `VacancyController` и `ApplicationController` имеют `@Tag`;
+- PATCH изменения `ApplicationStatus` описан подробнее, включая ответы `200`, `400` и `404`;
+- принцип проекта — добавлять OpenAPI annotations выборочно, а не превращать controller в документационный слой.
+
+---
+
+## 2026-08-18 — Использовать multi-stage Docker image и Compose для app + PostgreSQL
+
+### Решение
+
+Добавить multi-stage `Dockerfile` и `compose.yaml`, который поднимает два services:
+
+```text
+app
+db
+```
+
+Для runtime использовать JRE image, PostgreSQL хранить в named volume, а готовность database проверять healthcheck перед запуском приложения.
+
+### Причина
+
+Портфолийный проект должен запускаться воспроизводимо без ручной установки конкретной схемы БД. Docker Compose должен описывать минимальную рабочую среду приложения и PostgreSQL, а Flyway — автоматически строить schema при запуске на пустой database.
+
+Multi-stage build позволяет не переносить JDK и build tooling в runtime image.
+
+### Альтернативы
+
+- запускать приложение только из IntelliJ и использовать локальный PostgreSQL;
+- использовать single-stage Docker image с JDK;
+- публиковать PostgreSQL container на host port `5432`;
+- не использовать named volume и терять данные при пересоздании container.
+
+### Последствия
+
+- `Dockerfile` использует `eclipse-temurin:21-jdk` для build stage и `eclipse-temurin:21-jre` для runtime stage;
+- `app` публикуется как `127.0.0.1:8080:8080`;
+- внутри Compose network приложение подключается к database по service name `db:5432`;
+- PostgreSQL container не публикуется на Windows host port `5432`, поэтому не конфликтует с локальным PostgreSQL;
+- используется named volume `postgres_data`;
+- `docker compose down` сохраняет volume, а `docker compose down -v` удаляет его;
+- `db` использует `pg_isready` healthcheck, а `app` зависит от `service_healthy`;
+- Flyway автоматически применяет migrations к пустому container database;
+- `DB_PASSWORD` передаётся через environment variable и не хранится в Git;
+- `.dockerignore` исключает `target`, `.git`, `.idea`, `*.iml` и `.env`.
+
+---
+
+## 2026-08-18 — Реализовать User registration до полного Spring Security и хранить password только как BCrypt hash
+
+### Решение
+
+Добавить базовую `User` model и registration flow до подключения полного `spring-boot-starter-security`.
+
+Для password hashing использовать только `spring-security-crypto` и Spring `PasswordEncoder` с `BCryptPasswordEncoder`.
+
+Raw password существует только во входном `RegistrationRequest`. В `User` сохраняется только `passwordHash`, а `UserResponse` не содержит ни raw password, ни hash.
+
+### Причина
+
+Регистрацию и password storage полезно понять отдельно от Spring Security filter chain, authentication manager и JWT. Подключение полного security starter раньше готовой configuration автоматически изменило бы доступ к существующим endpoints и добавило бы сразу слишком много новых механизмов.
+
+BCrypt — adaptive one-way password hashing algorithm с random salt. Один и тот же raw password может давать разные hashes, поэтому при login password должен проверяться через `PasswordEncoder.matches(raw, storedHash)`, а не через повторный `encode(...)` и сравнение строк.
+
+### Альтернативы
+
+- подключить полный `spring-boot-starter-security` сразу;
+- хранить raw password в database;
+- самостоятельно использовать BCrypt API без `PasswordEncoder` abstraction;
+- реализовать JWT одновременно с регистрацией.
+
+### Последствия
+
+- добавлена migration `V2__create_users_table.sql`;
+- `users.email` имеет database-level `UNIQUE` constraint;
+- `UserService.register(...)` дополнительно делает `existsByEmail(...)` для понятной business error;
+- duplicate registration возвращает `409 Conflict` через `EmailAlreadyExistsException` и общий `ErrorResponse`;
+- database `UNIQUE` остаётся окончательной integrity guarantee, даже если два параллельных запроса одновременно пройдут business-check;
+- регистрация доступна через `POST /api/auth/register` и возвращает `201 Created`;
+- password/hash не возвращаются клиенту;
+- `AuthIntegrationTest` проверяет реальный BCrypt hash и PostgreSQL Testcontainer;
+- полный Spring Security, login и JWT остаются следующими отдельными этапами;
+- после применения `V2` дальнейшие изменения schema пользователей должны оформляться через `V3`, `V4` и далее, а не редактированием применённой `V2`.
+
+---
+
 ## Шаблон новой записи
 
 ## YYYY-MM-DD — Название решения
