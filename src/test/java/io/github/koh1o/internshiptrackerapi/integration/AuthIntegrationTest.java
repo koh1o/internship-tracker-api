@@ -101,4 +101,56 @@ class AuthIntegrationTest {
 
         assertEquals(1, userRepository.count());
     }
+
+    @Test
+    void shouldLoginWithValidCredentials() throws Exception {
+        String email = "student@example.com";
+        String rawPassword = "secret123";
+
+        String passwordHash = passwordEncoder.encode(rawPassword);
+
+        User user = new User(email, passwordHash);
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "email": "student@example.com",
+                                          "password": "secret123"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenLoginPasswordIsWrong() throws Exception {
+        String email = "student@example.com";
+        String rawPassword = "secret123";
+
+        String passwordHash = passwordEncoder.encode(rawPassword);
+
+        User user = new User(email, passwordHash);
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "email": "student@example.com",
+                                          "password": "wrongPassword"
+                                        }
+                                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/login"));
+    }
 }

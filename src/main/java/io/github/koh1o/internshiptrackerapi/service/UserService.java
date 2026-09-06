@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.entity.User;
 import io.github.koh1o.internshiptrackerapi.exception.EmailAlreadyExistsException;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidCredentialsException;
 import io.github.koh1o.internshiptrackerapi.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,5 +32,16 @@ public class UserService {
         User user = new User(email, passwordHash);
 
         return userRepository.save(user);
+    }
+
+    public User authenticate(String email, String password) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+
+        return user;
     }
 }

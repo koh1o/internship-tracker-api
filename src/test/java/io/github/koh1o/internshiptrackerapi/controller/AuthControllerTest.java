@@ -3,6 +3,7 @@ package io.github.koh1o.internshiptrackerapi.controller;
 import io.github.koh1o.internshiptrackerapi.dto.auth.UserResponse;
 import io.github.koh1o.internshiptrackerapi.entity.User;
 import io.github.koh1o.internshiptrackerapi.exception.EmailAlreadyExistsException;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidCredentialsException;
 import io.github.koh1o.internshiptrackerapi.mapper.UserMapper;
 import io.github.koh1o.internshiptrackerapi.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -122,5 +123,95 @@ class AuthControllerTest {
 
         verify(userService).register(email, rawPassword);
         verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    void shouldLoginUser() throws Exception {
+        String email = "student@example.com";
+        String rawPassword = "secret123";
+        String passwordHash = "encoded-password";
+
+        LocalDateTime createdAt =
+                LocalDateTime.of(2026, 9, 6, 18, 0);
+
+        User user = new User(email, passwordHash);
+
+        UserResponse response = new UserResponse(
+                1L,
+                email,
+                createdAt,
+                createdAt
+        );
+
+        when(userService.authenticate(email, rawPassword))
+                .thenReturn(user);
+
+        when(userMapper.toResponse(user))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "email": "student@example.com",
+                                          "password": "secret123"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+
+        verify(userService).authenticate(email, rawPassword);
+        verify(userMapper).toResponse(user);
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenCredentialsAreInvalid() throws Exception {
+        String email = "student@example.com";
+        String rawPassword = "wrongPassword";
+
+        when(userService.authenticate(email, rawPassword))
+                .thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "email": "student@example.com",
+                                          "password": "wrongPassword"
+                                        }
+                                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/login"));
+
+        verify(userService).authenticate(email, rawPassword);
+        verifyNoInteractions(userMapper);
+    }
+
+    @Test
+    void shouldRejectInvalidLoginRequest() throws Exception {
+        mockMvc.perform(
+                        post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "email": "not-an-email",
+                                          "password": "secret123"
+                                        }
+                                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.email").value("Email must be valid"));
+
+        verifyNoInteractions(userService, userMapper);
     }
 }

@@ -1,5 +1,6 @@
 package io.github.koh1o.internshiptrackerapi.controller;
 
+import io.github.koh1o.internshiptrackerapi.dto.auth.LoginRequest;
 import io.github.koh1o.internshiptrackerapi.dto.auth.RegistrationRequest;
 import io.github.koh1o.internshiptrackerapi.dto.auth.UserResponse;
 import io.github.koh1o.internshiptrackerapi.entity.User;
@@ -35,5 +36,15 @@ public class AuthController {
         User user = userService.register(request.email(), request.password());
         UserResponse userResponse = userMapper.toResponse(user);
         return ResponseEntity.status(HttpStatus.CREATED).body(userResponse);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<UserResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        User user = userService.authenticate(request.email(), request.password());
+        UserResponse userResponse = userMapper.toResponse(user);
+
+        return ResponseEntity.ok(userResponse);
     }
 }

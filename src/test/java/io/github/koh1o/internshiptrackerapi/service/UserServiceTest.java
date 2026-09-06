@@ -2,6 +2,7 @@ package io.github.koh1o.internshiptrackerapi.service;
 
 import io.github.koh1o.internshiptrackerapi.entity.User;
 import io.github.koh1o.internshiptrackerapi.exception.EmailAlreadyExistsException;
+import io.github.koh1o.internshiptrackerapi.exception.InvalidCredentialsException;
 import io.github.koh1o.internshiptrackerapi.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,9 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -106,5 +110,69 @@ class UserServiceTest {
         User savedUser = userCaptor.getValue();
         assertEquals(passwordHash, savedUser.getPasswordHash());
         assertNotEquals(rawPassword, savedUser.getPasswordHash());
+    }
+
+    @Test
+    void shouldAuthenticateUser() {
+        String email = "student@example.com";
+        String rawPassword = "secret123";
+        String passwordHash = "encoded-password";
+
+        User user = new User(email, passwordHash);
+
+        when(userRepository.findByEmail(email))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(rawPassword, passwordHash))
+                .thenReturn(true);
+
+        User authenticatedUser = userService.authenticate(email, rawPassword);
+
+        assertSame(user, authenticatedUser);
+
+        verify(userRepository).findByEmail(email);
+        verify(passwordEncoder).matches(rawPassword, passwordHash);
+    }
+
+    @Test
+    void shouldRejectAuthenticationWhenUserDoesNotExist() {
+        String email = "missing@example.com";
+        String rawPassword = "secret123";
+
+        when(userRepository.findByEmail(email))
+                .thenReturn(Optional.empty());
+
+        InvalidCredentialsException exception = assertThrows(
+                InvalidCredentialsException.class,
+                () -> userService.authenticate(email, rawPassword)
+        );
+
+        assertEquals("Invalid email or password", exception.getMessage());
+
+        verify(passwordEncoder, never())
+                .matches(anyString(), anyString());
+    }
+
+    @Test
+    void shouldRejectAuthenticationWhenPasswordIsWrong() {
+        String email = "student@example.com";
+        String rawPassword = "wrongPassword";
+        String passwordHash = "encoded-password";
+
+        User user = new User(email, passwordHash);
+
+        when(userRepository.findByEmail(email))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(rawPassword, passwordHash))
+                .thenReturn(false);
+
+        InvalidCredentialsException exception = assertThrows(
+                InvalidCredentialsException.class,
+                () -> userService.authenticate(email, rawPassword)
+        );
+        assertEquals("Invalid email or password", exception.getMessage());
+
+        verify(passwordEncoder).matches(rawPassword, passwordHash);
     }
 }
