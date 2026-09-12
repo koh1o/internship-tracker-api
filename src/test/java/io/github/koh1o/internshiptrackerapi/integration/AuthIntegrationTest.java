@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -152,5 +153,29 @@ class AuthIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Unauthorized"))
                 .andExpect(jsonPath("$.message").value("Invalid email or password"))
                 .andExpect(jsonPath("$.path").value("/api/auth/login"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenLoginUserDoesNotExist() throws Exception {
+        String email = "missing@example.com";
+        String password = "password123";
+
+        String requestBody = """
+                {
+                  "email": "%s",
+                  "password": "%s"
+                }
+                """.formatted(email, password);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/login"));
+
+        assertFalse(userRepository.existsByEmail(email));
     }
 }

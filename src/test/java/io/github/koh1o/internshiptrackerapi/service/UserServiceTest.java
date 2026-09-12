@@ -10,18 +10,24 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +38,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AuthenticationManager authenticationManager;
 
     @InjectMocks
     private UserService userService;
@@ -115,64 +124,70 @@ class UserServiceTest {
     @Test
     void shouldAuthenticateUser() {
         String email = "student@example.com";
-        String rawPassword = "secret123";
-        String passwordHash = "encoded-password";
+        String password = "password123";
 
-        User user = new User(email, passwordHash);
+        User user = new User(email, "encodedPassword");
+
+        UsernamePasswordAuthenticationToken authenticationRequest =
+                UsernamePasswordAuthenticationToken.unauthenticated(
+                        email,
+                        password
+                );
+
+        Authentication authentication = mock(Authentication.class);
+
+        when(authenticationManager.authenticate(
+                any(UsernamePasswordAuthenticationToken.class)
+        )).thenReturn(authentication);
 
         when(userRepository.findByEmail(email))
                 .thenReturn(Optional.of(user));
 
-        when(passwordEncoder.matches(rawPassword, passwordHash))
-                .thenReturn(true);
-
-        User authenticatedUser = userService.authenticate(email, rawPassword);
+        User authenticatedUser = userService.authenticate(email, password);
 
         assertSame(user, authenticatedUser);
 
+        verify(authenticationManager).authenticate(authenticationRequest);
         verify(userRepository).findByEmail(email);
-        verify(passwordEncoder).matches(rawPassword, passwordHash);
     }
 
     @Test
-    void shouldRejectAuthenticationWhenUserDoesNotExist() {
-        String email = "missing@example.com";
+    void shouldRejectAuthenticationWhenCredentialsAreInvalid() {
+        String email = "student@example.com";
+        String rawPassword = "wrongPassword";
+
+        when(authenticationManager.authenticate(
+                any(UsernamePasswordAuthenticationToken.class)
+        )).thenThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThrows(
+                InvalidCredentialsException.class,
+                () -> userService.authenticate(email, rawPassword));
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void shouldRejectAuthenticationWhenUserCannotBeLoadedAfterAuthentication() {
+        String email = "student@example.com";
         String rawPassword = "secret123";
+
+        Authentication authentication = mock(Authentication.class);
+
+        when(authenticationManager.authenticate(
+                any(UsernamePasswordAuthenticationToken.class)
+        )).thenReturn(authentication);
 
         when(userRepository.findByEmail(email))
                 .thenReturn(Optional.empty());
 
-        InvalidCredentialsException exception = assertThrows(
+        assertThrows(
                 InvalidCredentialsException.class,
                 () -> userService.authenticate(email, rawPassword)
         );
 
-        assertEquals("Invalid email or password", exception.getMessage());
+        verify(authenticationManager)
+                .authenticate(any(UsernamePasswordAuthenticationToken.class));
 
-        verify(passwordEncoder, never())
-                .matches(anyString(), anyString());
-    }
-
-    @Test
-    void shouldRejectAuthenticationWhenPasswordIsWrong() {
-        String email = "student@example.com";
-        String rawPassword = "wrongPassword";
-        String passwordHash = "encoded-password";
-
-        User user = new User(email, passwordHash);
-
-        when(userRepository.findByEmail(email))
-                .thenReturn(Optional.of(user));
-
-        when(passwordEncoder.matches(rawPassword, passwordHash))
-                .thenReturn(false);
-
-        InvalidCredentialsException exception = assertThrows(
-                InvalidCredentialsException.class,
-                () -> userService.authenticate(email, rawPassword)
-        );
-        assertEquals("Invalid email or password", exception.getMessage());
-
-        verify(passwordEncoder).matches(rawPassword, passwordHash);
+        verify(userRepository).findByEmail(email);
     }
 }
