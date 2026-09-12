@@ -844,6 +844,144 @@ BCrypt — adaptive one-way password hashing algorithm с random salt. Один 
 
 ---
 
+## 2026-09-06 — Реализовать login credentials до подключения полного Spring Security и использовать единый authentication error
+
+### Решение
+
+До подключения `spring-boot-starter-security` реализовать и протестировать обычную проверку login credentials в существующем Service / Controller flow.
+
+`UserService.authenticate(email, password)` должен:
+
+```text
+UserRepository.findByEmail(email)
+→ User или InvalidCredentialsException
+→ PasswordEncoder.matches(rawPassword, storedHash)
+→ User или InvalidCredentialsException
+```
+
+Для missing user и wrong password использовать один public exception и один HTTP contract:
+
+```text
+401 Unauthorized
+Invalid email or password
+```
+
+Добавить `POST /api/auth/login`, который на этом этапе только проверяет credentials и возвращает `UserResponse` при успехе. Он пока не создаёт JWT и не формирует authenticated state для следующих запросов.
+
+### Причина
+
+Проверку email/password полезно отделить от Spring Security filter chain, Security Context и JWT. Это позволяет сначала понять базовую authentication-логику и доказать её unit-, controller- и integration tests, а затем подключать framework-механизмы отдельным этапом.
+
+Одинаковая ошибка для missing email и wrong password не раскрывает клиенту, зарегистрирован конкретный email или нет. Для BCrypt password нельзя делать повторный `encode(...)` и сравнивать строки: проверка выполняется через `PasswordEncoder.matches(...)`.
+
+### Альтернативы
+
+- подключить полный Spring Security и JWT одновременно с первым login endpoint;
+- возвращать разные ошибки для unknown email и wrong password;
+- выполнять `existsByEmail(...)` перед `findByEmail(...)`;
+- проверять password через `encode(raw).equals(storedHash)`;
+- использовать session-based authentication уже на этом этапе.
+
+### Последствия
+
+- добавлен `LoginRequest` с Bean Validation;
+- добавлен `InvalidCredentialsException`;
+- `UserService.authenticate(...)` делает один `findByEmail(...)` и использует `PasswordEncoder.matches(...)`;
+- `GlobalExceptionHandler` преобразует invalid credentials в `401 Unauthorized`;
+- добавлен `POST /api/auth/login`;
+- `AuthController` остаётся тонким и делегирует authentication в Service;
+- missing user и wrong password имеют одинаковый public response;
+- login credentials покрыты `UserServiceTest`, `AuthControllerTest` и `AuthIntegrationTest`;
+- integration test использует настоящий BCrypt и PostgreSQL Testcontainer;
+- всего в проекте после этого блока — 204 tests;
+- текущий login endpoint ещё не выдаёт token и не сохраняет authentication между запросами;
+- следующий отдельный этап — базовая Spring Security configuration и `SecurityFilterChain`, затем JWT.
+
+---
+
+## 2026-09-12 — Интегрировать login с Spring Security AuthenticationManager и использовать stateless SecurityFilterChain
+
+### Решение
+
+Заменить ручную проверку password в `UserService.authenticate(...)` на стандартный Spring Security authentication flow.
+
+Подключить:
+
+```text
+spring-boot-starter-security
+SecurityFilterChain
+CustomUserDetailsService
+AuthenticationManager
+ProviderManager
+DaoAuthenticationProvider
+SessionCreationPolicy.STATELESS
+```
+
+Текущий authentication flow:
+
+```text
+email + raw password
+→ UsernamePasswordAuthenticationToken.unauthenticated(...)
+→ AuthenticationManager
+→ ProviderManager
+→ DaoAuthenticationProvider
+├── CustomUserDetailsService
+│   └── UserRepository.findByEmail(...)
+└── PasswordEncoder
+→ Authentication или BadCredentialsException
+```
+
+В `SecurityFilterChain`:
+
+```text
+CSRF → disabled
+SessionCreationPolicy → STATELESS
+register/login/Swagger → permitAll
+остальные requests → временно permitAll
+```
+
+JWT в этот же блок не добавлять.
+
+### Причина
+
+После отдельного изучения registration и ручной credential-check логики следующий шаг должен перевести authentication на стандартные Spring Security abstractions.
+
+`DaoAuthenticationProvider` уже решает типовую задачу username/password authentication: получает пользователя через `UserDetailsService` и проверяет raw password через `PasswordEncoder`. Это убирает ручной вызов `PasswordEncoder.matches(...)` из business Service и подготавливает проект к дальнейшему JWT authentication.
+
+`SessionCreationPolicy.STATELESS` фиксирует архитектурное решение не хранить authentication между запросами в server-side HTTP session. В будущем каждый protected request будет передавать JWT самостоятельно.
+
+Основные endpoints пока оставлены через `anyRequest().permitAll()`, потому что JWT validation ещё отсутствует. Немедленный переход на `authenticated()` сделал бы основной API недоступным для обычных запросов без механизма восстановления `Authentication`.
+
+### Альтернативы
+
+- оставить ручную проверку `PasswordEncoder.matches(...)` в `UserService`;
+- использовать session-based authentication и `HttpSession`;
+- включить `httpBasic()` или `formLogin()`;
+- сразу добавить JWT одновременно с первым `SecurityFilterChain`;
+- сделать JPA `User` напрямую `implements UserDetails`;
+- сразу закрыть основной API через `.anyRequest().authenticated()`.
+
+### Последствия
+
+- dependency `spring-security-crypto` заменена на `spring-boot-starter-security`;
+- добавлен `SecurityConfiguration`;
+- CSRF отключён для выбранной stateless REST architecture;
+- включён `SessionCreationPolicy.STATELESS`;
+- `/api/auth/register`, `/api/auth/login`, OpenAPI и Swagger явно имеют `permitAll()`;
+- основной API временно также остаётся public через `.anyRequest().permitAll()`;
+- добавлен `CustomUserDetailsService`, который загружает пользователя по email и возвращает Spring Security `UserDetails`;
+- временно используется authority `"USER"` без role-based authorization;
+- добавлен `AuthenticationManager` на основе `ProviderManager` и `DaoAuthenticationProvider`;
+- `UserService.authenticate(...)` создаёт unauthenticated `UsernamePasswordAuthenticationToken` и делегирует credential-check Spring Security;
+- `BadCredentialsException` преобразуется в существующий `InvalidCredentialsException`, поэтому публичный `401 Invalid email or password` не изменился;
+- после successful authentication временно выполняется второй `findByEmail(...)`, чтобы вернуть JPA `User` существующему mapper/controller flow;
+- добавлены `CustomUserDetailsServiceTest` и integration scenario для отсутствующего login user;
+- после удаления дублирующего wrong-password integration test полный suite содержит `207` tests;
+- стабильный code-коммит: `042cdc1 Integrate Spring Security authentication`;
+- следующий отдельный этап — JWT structure/signing/validation, затем защита остальных endpoints через `authenticated()`.
+
+---
+
 ## Шаблон новой записи
 
 ## YYYY-MM-DD — Название решения
